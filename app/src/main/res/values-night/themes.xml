@@ -1,4 +1,28 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.GEDCOMViewer" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.GEDCOMViewer" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/color_silver</item>
+        <item name="colorOnPrimary">@color/color_slate_dark</item>
+        <item name="colorPrimaryContainer">@color/color_slate</item>
+        <item name="colorOnPrimaryContainer">@color/color_silver</item>
+        <item name="colorSecondary">@color/color_silver</item>
+        <item name="colorOnSecondary">@color/color_slate_dark</item>
+        <item name="colorSecondaryContainer">@color/color_slate</item>
+        <item name="colorOnSecondaryContainer">@color/color_silver</item>
+        <item name="colorTertiary">@color/color_slate</item>
+        <item name="colorOnTertiary">@color/color_silver</item>
+        <item name="colorSurface">@color/color_silver_bright</item>
+        <item name="colorOnSurface">@color/color_silver</item>
+        <item name="colorSurfaceVariant">@color/color_silver_muted</item>
+        <item name="colorOnSurfaceVariant">@color/color_silver</item>
+        <item name="colorOutline">@color/color_silver</item>
+
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:windowSplashScreenBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/navigation_bar_surface</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
 </resources>

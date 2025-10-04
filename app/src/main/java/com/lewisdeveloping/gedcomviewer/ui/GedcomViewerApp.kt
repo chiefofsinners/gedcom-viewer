@@ -82,7 +82,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(uiState.needsFileSelection) {
+    LaunchedEffect(uiState.needsFileSelection, uiState.data) {
         if (uiState.needsFileSelection) {
             navigateToHome()
         } else if (uiState.data != null && navController.currentDestination?.route == Routes.Home) {
@@ -90,7 +90,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(uiState.currentDocumentUri, uiState.isSampleData) {
+    LaunchedEffect(uiState.currentDocumentUri, uiState.isSampleData, uiState.data) {
         if (!uiState.needsFileSelection && uiState.data != null) {
             navigateToIndex()
         }

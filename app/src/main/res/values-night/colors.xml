@@ -1,0 +1,11 @@
+<resources>
+    <color name="color_slate">#FF1F2933</color>
+    <color name="color_slate_light">#FF4B5563</color>
+    <color name="color_slate_dark">#FF111827</color>
+    <color name="color_silver">#FFD1D5DB</color>
+    <color name="color_silver_bright">#FF232830</color>
+    <color name="color_silver_muted">#FF2F3540</color>
+
+    <color name="window_background">@color/color_slate_dark</color>
+    <color name="navigation_bar_surface">@color/color_slate</color>
+</resources>
