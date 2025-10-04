@@ -12,19 +12,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.lewisdeveloping.gedcomviewer.R
 import com.lewisdeveloping.gedcomviewer.model.Individual
+import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
+import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IndividualsScreen(
     individuals: List<Individual>,
+    currentFileName: String?,
+    onOpenFile: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateIndex: () -> Unit,
     onIndividualSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(title = { Text(text = stringResource(id = R.string.app_name)) })
+            TopAppBar(
+                title = {
+                    Text(text = currentFileName?.ifBlank { null } ?: stringResource(id = R.string.app_name))
+                }
+            )
+        },
+        bottomBar = {
+            FileActionBar(
+                selected = FileActionBarSelection.INDEX,
+                onNavigateHome = onNavigateHome,
+                onNavigateIndex = onNavigateIndex,
+                onOpenFile = onOpenFile
+            )
         }
     ) { contentPadding ->
         LazyColumn(
