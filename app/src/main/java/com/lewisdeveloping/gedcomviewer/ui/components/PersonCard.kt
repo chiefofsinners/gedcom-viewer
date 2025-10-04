@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.model.Individual
-import com.lewisdeveloping.gedcomviewer.ui.theme.Lavender
 
 @Composable
 fun PersonCard(
@@ -43,7 +42,11 @@ fun PersonCard(
 
     Card(
         modifier = clickableModifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             label?.let {
@@ -129,7 +132,7 @@ private fun Avatar(initials: String, size: Dp = 56.dp) {
             .size(size)
             .aspectRatio(1f)
             .clip(CircleShape)
-            .background(Lavender),
+            .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center
     ) {
         Text(

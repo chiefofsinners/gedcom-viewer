@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,11 +31,20 @@ fun IndividualsScreen(
 ) {
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(text = currentFileName?.ifBlank { null } ?: stringResource(id = R.string.app_name))
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                windowInsets = TopAppBarDefaults.windowInsets
             )
         },
         bottomBar = {

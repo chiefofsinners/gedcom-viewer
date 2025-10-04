@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ fun FamilyScreen(
 
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text(text = focus?.displayName ?: "Family") },
@@ -57,7 +59,15 @@ fun FamilyScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                windowInsets = TopAppBarDefaults.windowInsets
             )
         },
         bottomBar = {
@@ -221,7 +231,12 @@ private fun FamilyCoreSection(
             }
         )
         marriage?.description()?.let { description ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
                 Text(
                     text = "Married: $description",
                     modifier = Modifier.padding(16.dp),
@@ -270,17 +285,19 @@ private fun ChildrenSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        if (children.isEmpty()) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        val cardColors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+        Card(colors = cardColors) {
+            if (children.isEmpty()) {
                 Text(
                     text = "No recorded children",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        } else {
-            Card {
+            } else {
                 Column {
                     children.forEach { child ->
                         PersonRow(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -198,6 +199,7 @@ private fun HomeScreen(
     onNavigateIndex: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             FileActionBar(
                 selected = FileActionBarSelection.HOME,
@@ -236,10 +238,24 @@ private fun HomeScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                Button(onClick = onBrowseFiles) {
+                Button(
+                    onClick = onBrowseFiles,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        disabledContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
                     Text(text = "Browse files")
                 }
-                OutlinedButton(onClick = onLoadSample) {
+                OutlinedButton(
+                    onClick = onLoadSample,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        disabledContentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text(text = "Load sample data")
                 }
             }
@@ -256,7 +272,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
             modifier = Modifier.padding(24.dp)
         ) {
             Text(text = "Something went wrong", style = MaterialTheme.typography.titleMedium)
-            Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
             Button(onClick = onRetry) {
                 Text(text = "Retry")
             }

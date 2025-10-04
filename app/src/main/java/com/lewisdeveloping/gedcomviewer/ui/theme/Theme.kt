@@ -8,31 +8,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
-    primary = DeepPurple,
+    primary = SlateLight,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFDFE0FF),
-    onPrimaryContainer = Slate,
+    primaryContainer = Slate,
+    onPrimaryContainer = Color.White,
     secondary = Slate,
     onSecondary = Color.White,
-    background = Color(0xFFF6F7FB),
+    secondaryContainer = Silver,
+    onSecondaryContainer = Slate,
+    tertiary = Silver,
+    onTertiary = Slate,
+    background = SilverBright,
     surface = Color.White,
-    onSurface = Color(0xFF1C1C1E),
-    surfaceVariant = Lavender,
-    onSurfaceVariant = Slate
+    onSurface = Slate,
+    surfaceVariant = Silver,
+    onSurfaceVariant = SlateLight,
+    outline = SlateLight
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFC7C5FF),
-    onPrimary = Slate,
-    primaryContainer = Slate,
-    onPrimaryContainer = Color(0xFFC7C5FF),
-    secondary = Color(0xFFB9C6FF),
-    onSecondary = Slate,
-    background = Color(0xFF12121A),
-    surface = Color(0xFF1D1D27),
-    onSurface = Color(0xFFE7E7F0),
-    surfaceVariant = Color(0xFF343545),
-    onSurfaceVariant = Color(0xFFE7E7F0)
+    primary = Silver,
+    onPrimary = SlateDark,
+    primaryContainer = SlateDark,
+    onPrimaryContainer = Silver,
+    secondary = Silver,
+    onSecondary = SlateDark,
+    secondaryContainer = Slate,
+    onSecondaryContainer = Silver,
+    tertiary = Slate,
+    onTertiary = Silver,
+    background = SlateDark,
+    surface = Color(0xFF232830),
+    onSurface = Silver,
+    surfaceVariant = Color(0xFF2F3540),
+    onSurfaceVariant = Silver,
+    outline = Silver
 )
 
 @Composable
