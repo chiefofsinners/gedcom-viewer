@@ -61,56 +61,96 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         openDocumentLauncher.launch(arrayOf("application/octet-stream", "text/plain", "application/x-gedcom"))
     }
 
-    GedcomViewerTheme {
-        when {
-            uiState.needsFileSelection -> {
-                FileSelectionScreen(
-                    errorMessage = errorMessage,
-                    onSelectFile = openFilePicker,
-                    onLoadSample = viewModel::loadSample,
-                    onNavigateHome = viewModel::showHome,
-                    onNavigateIndex = viewModel::openSavedIndex,
-                    onOpenFile = openFilePicker
-                )
+    val navigateToHome: () -> Unit = {
+        if (navController.currentDestination?.route != Routes.Home) {
+            navController.navigate(Routes.Home) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                launchSingleTop = true
             }
-            uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        }
+    }
+    val navigateToIndex: () -> Unit = {
+        if (navController.currentDestination?.route != Routes.Individuals) {
+            val popped = navController.popBackStack(Routes.Individuals, false)
+            if (!popped) {
+                navController.navigate(Routes.Individuals) {
+                    popUpTo(Routes.Home) { inclusive = false }
+                    launchSingleTop = true
                 }
             }
-            data != null -> {
-                LaunchedEffect(uiState.currentDocumentUri, uiState.isSampleData) {
-                    navController.navigate(Routes.Individuals) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
+        }
+    }
 
-                NavHost(
-                    navController = navController,
-                    startDestination = Routes.Individuals
-                ) {
-                    composable(Routes.Individuals) {
+    LaunchedEffect(uiState.needsFileSelection) {
+        if (uiState.needsFileSelection) {
+            navigateToHome()
+        } else if (uiState.data != null && navController.currentDestination?.route == Routes.Home) {
+            navigateToIndex()
+        }
+    }
+
+    LaunchedEffect(uiState.currentDocumentUri, uiState.isSampleData) {
+        if (!uiState.needsFileSelection && uiState.data != null) {
+            navigateToIndex()
+        }
+    }
+
+    GedcomViewerTheme {
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Routes.Home
+            ) {
+                composable(Routes.Home) {
+                    HomeScreen(
+                        errorMessage = errorMessage,
+                        hasData = data != null,
+                        onBrowseFiles = openFilePicker,
+                        onLoadSample = viewModel::loadSample,
+                        onNavigateIndex = {
+                            val navigated = viewModel.openSavedIndex()
+                            if (navigated) {
+                                navigateToIndex()
+                            }
+                        }
+                    )
+                }
+                composable(Routes.Individuals) {
+                    if (data == null) {
+                        // Should not normally happen, but guard to avoid crashes.
+                        Text(
+                            text = "No GEDCOM data loaded",
+                            modifier = Modifier.padding(24.dp),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    } else {
                         IndividualsScreen(
                             individuals = data.individualsSortedByName,
                             currentFileName = uiState.currentFileName,
                             onOpenFile = openFilePicker,
-                            onNavigateHome = viewModel::showHome,
-                            onNavigateIndex = {
-                                navController.navigate(Routes.Individuals) {
-                                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                                }
+                            onNavigateHome = {
+                                viewModel.showHome()
+                                navigateToHome()
                             },
+                            onNavigateIndex = { /* Already on index, no-op */ },
                             onIndividualSelected = { id ->
                                 navController.navigate("${Routes.Family}/$id")
                             }
                         )
                     }
-                    composable(
-                        route = "${Routes.Family}/{${Routes.FamilyArg}}",
-                        arguments = listOf(navArgument(Routes.FamilyArg) { type = NavType.StringType })
-                    ) { entry ->
-                        val individualId = entry.arguments?.getString(Routes.FamilyArg) ?: return@composable
+                }
+                composable(
+                    route = "${Routes.Family}/{${Routes.FamilyArg}}",
+                    arguments = listOf(navArgument(Routes.FamilyArg) { type = NavType.StringType })
+                ) { entry ->
+                    val individualId = entry.arguments?.getString(Routes.FamilyArg) ?: return@composable
+                    if (data == null) {
+                        Text(
+                            text = "Family data unavailable",
+                            modifier = Modifier.padding(24.dp),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    } else {
                         FamilyScreen(
                             individualId = individualId,
                             data = data,
@@ -120,10 +160,14 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                                     navController.navigate("${Routes.Family}/$targetId")
                                 }
                             },
-                            onNavigateHome = viewModel::showHome,
+                            onNavigateHome = {
+                                viewModel.showHome()
+                                navigateToHome()
+                            },
                             onNavigateIndex = {
-                                navController.navigate(Routes.Individuals) {
-                                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                                val navigated = viewModel.openSavedIndex()
+                                if (navigated) {
+                                    navigateToIndex()
                                 }
                             },
                             onOpenFile = openFilePicker
@@ -131,7 +175,14 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                     }
                 }
             }
-            errorMessage != null -> {
+
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            if (errorMessage != null && data == null && !uiState.isLoading) {
                 ErrorState(message = errorMessage, onRetry = viewModel::refresh)
             }
         }
@@ -139,21 +190,21 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
 }
 
 @Composable
-private fun FileSelectionScreen(
+private fun HomeScreen(
     errorMessage: String?,
-    onSelectFile: () -> Unit,
+    hasData: Boolean,
+    onBrowseFiles: () -> Unit,
     onLoadSample: () -> Unit,
-    onNavigateHome: () -> Unit,
-    onNavigateIndex: () -> Unit,
-    onOpenFile: () -> Unit
+    onNavigateIndex: () -> Unit
 ) {
     Scaffold(
         bottomBar = {
             FileActionBar(
                 selected = FileActionBarSelection.HOME,
-                onNavigateHome = onNavigateHome,
+                onNavigateHome = {},
                 onNavigateIndex = onNavigateIndex,
-                onOpenFile = onOpenFile
+                onOpenFile = onBrowseFiles,
+                indexEnabled = hasData
             )
         }
     ) { padding ->
@@ -164,8 +215,7 @@ private fun FileSelectionScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier
-                    .padding(24.dp),
+                modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -186,7 +236,7 @@ private fun FileSelectionScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                Button(onClick = onSelectFile) {
+                Button(onClick = onBrowseFiles) {
                     Text(text = "Browse files")
                 }
                 OutlinedButton(onClick = onLoadSample) {
@@ -215,6 +265,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 }
 
 private object Routes {
+    const val Home = "home"
     const val Individuals = "individuals"
     const val Family = "family"
     const val FamilyArg = "individualId"

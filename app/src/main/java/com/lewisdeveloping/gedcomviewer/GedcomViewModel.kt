@@ -17,6 +17,11 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
     private val repository = GedcomRepository(application)
     private val prefs = application.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
+    private var cachedData: GedcomData? = null
+    private var cachedUri: Uri? = null
+    private var cachedFileName: String? = null
+    private var cachedIsSample: Boolean = false
+
     private val _uiState = MutableStateFlow(
         GedcomUiState(isLoading = true, needsFileSelection = false)
     )
@@ -44,6 +49,7 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val data = repository.loadSample()
+                cacheLoadedData(data, uri = null, displayName = GedcomRepository.DEFAULT_FILE, isSample = true)
                 saveSource(uri = null, displayName = GedcomRepository.DEFAULT_FILE, isSample = true)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -86,11 +92,34 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun showHome() {
-        _uiState.value = GedcomUiState(needsFileSelection = true)
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            isLoading = false,
+            needsFileSelection = true,
+            error = null
+        )
     }
 
-    fun openSavedIndex() {
+    fun openSavedIndex(): Boolean {
+        val currentState = _uiState.value
+        if (cachedData != null) {
+            _uiState.value = currentState.copy(
+                isLoading = false,
+                needsFileSelection = false,
+                data = cachedData,
+                currentDocumentUri = cachedUri,
+                currentFileName = cachedFileName,
+                isSampleData = cachedIsSample,
+                error = null
+            )
+            return true
+        }
+        if (currentState.data != null && !currentState.needsFileSelection) {
+            _uiState.value = currentState.copy(isLoading = false, error = null)
+            return true
+        }
         loadSavedSource(showPickerIfMissing = true)
+        return false
     }
 
     private fun loadSavedSource(showPickerIfMissing: Boolean) {
@@ -125,6 +154,7 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val data = repository.loadFromUri(uri)
+                cacheLoadedData(data, uri = uri, displayName = displayName, isSample = false)
                 saveSource(uri = uri, displayName = displayName, isSample = false)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -196,6 +226,17 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
             remove(KEY_LAST_URI)
             remove(KEY_LAST_NAME)
         }.apply()
+        cachedData = null
+        cachedUri = null
+        cachedFileName = null
+        cachedIsSample = false
+    }
+
+    private fun cacheLoadedData(data: GedcomData, uri: Uri?, displayName: String?, isSample: Boolean) {
+        cachedData = data
+        cachedUri = uri
+        cachedFileName = displayName
+        cachedIsSample = isSample
     }
 
     companion object {

@@ -62,7 +62,7 @@ fun FamilyScreen(
         },
         bottomBar = {
             FileActionBar(
-                selected = FileActionBarSelection.INDEX,
+                selected = null,
                 onNavigateHome = onNavigateHome,
                 onNavigateIndex = onNavigateIndex,
                 onOpenFile = onOpenFile
