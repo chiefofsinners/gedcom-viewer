@@ -7,7 +7,7 @@ import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import java.io.InputStream
 
 class GedcomParser {
-    private val lineRegex = Regex("""^(\\d+)\\s+(?:(@[^@]+@)\\s+)?([A-Z0-9_]+)(?:\\s+(.*))?$""")
+    private val lineRegex = Regex("""^(\d+)\s+(?:(@[^@]+@)\s+)?([A-Z0-9_]+)(?:\s+(.*))?$""")
     private val containerTags = setOf("BIRT", "DEAT", "MARR")
 
     fun parse(stream: InputStream): GedcomData {
