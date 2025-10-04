@@ -1,10 +1,11 @@
 package com.lewisdeveloping.gedcomviewer.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -72,32 +73,40 @@ fun FamilyScreen(
             val partnerParents = partner?.let { findFamily(it.familiesAsChild, data) }
             val children = partnerFamily?.childrenIds?.mapNotNull { data.individuals[it] } ?: emptyList()
 
-            Column(
+            BoxWithConstraints(
                 modifier = Modifier
                     .padding(contentPadding)
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                ParentsSection(
-                    focusParents = focusParents,
-                    partnerParents = partnerParents,
-                    data = data,
-                    onIndividualSelected = onIndividualSelected
-                )
+                val isCompact = maxWidth < 600.dp
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    ParentsSection(
+                        focusParents = focusParents,
+                        partnerParents = partnerParents,
+                        data = data,
+                        onIndividualSelected = onIndividualSelected,
+                        isCompact = isCompact
+                    )
 
-                FamilyCoreSection(
-                    focus = focus,
-                    partner = partner,
-                    marriage = partnerFamily?.marriage,
-                    onIndividualSelected = onIndividualSelected
-                )
+                    FamilyCoreSection(
+                        focus = focus,
+                        partner = partner,
+                        marriage = partnerFamily?.marriage,
+                        onIndividualSelected = onIndividualSelected,
+                        isCompact = isCompact
+                    )
 
-                ChildrenSection(
-                    children = children,
-                    onIndividualSelected = onIndividualSelected
-                )
+                    ChildrenSection(
+                        children = children,
+                        onIndividualSelected = onIndividualSelected
+                    )
+                }
             }
         }
     }
@@ -108,7 +117,8 @@ private fun ParentsSection(
     focusParents: Family?,
     partnerParents: Family?,
     data: GedcomData,
-    onIndividualSelected: (String) -> Unit
+    onIndividualSelected: (String) -> Unit,
+    isCompact: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -116,46 +126,50 @@ private fun ParentsSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            PersonCard(
-                individual = focusParents?.husbandId?.let { data.individuals[it] },
-                label = "Father",
-                modifier = Modifier.weight(1f),
-                onClick = onIndividualSelected
-            )
-            PersonCard(
-                individual = focusParents?.wifeId?.let { data.individuals[it] },
-                label = "Mother",
-                modifier = Modifier.weight(1f),
-                onClick = onIndividualSelected
-            )
-        }
+        ResponsivePersonCardRow(
+            isCompact = isCompact,
+            first = { modifier ->
+                PersonCard(
+                    individual = focusParents?.husbandId?.let { data.individuals[it] },
+                    label = "Father",
+                    modifier = modifier,
+                    onClick = onIndividualSelected
+                )
+            },
+            second = { modifier ->
+                PersonCard(
+                    individual = focusParents?.wifeId?.let { data.individuals[it] },
+                    label = "Mother",
+                    modifier = modifier,
+                    onClick = onIndividualSelected
+                )
+            }
+        )
         partnerParents?.let {
             Text(
                 text = "Spouse's Parents",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                PersonCard(
-                    individual = it.husbandId?.let { id -> data.individuals[id] },
-                    label = "Father-in-law",
-                    modifier = Modifier.weight(1f),
-                    onClick = onIndividualSelected
-                )
-                PersonCard(
-                    individual = it.wifeId?.let { id -> data.individuals[id] },
-                    label = "Mother-in-law",
-                    modifier = Modifier.weight(1f),
-                    onClick = onIndividualSelected
-                )
-            }
+            ResponsivePersonCardRow(
+                isCompact = isCompact,
+                first = { modifier ->
+                    PersonCard(
+                        individual = it.husbandId?.let { id -> data.individuals[id] },
+                        label = "Father-in-law",
+                        modifier = modifier,
+                        onClick = onIndividualSelected
+                    )
+                },
+                second = { modifier ->
+                    PersonCard(
+                        individual = it.wifeId?.let { id -> data.individuals[id] },
+                        label = "Mother-in-law",
+                        modifier = modifier,
+                        onClick = onIndividualSelected
+                    )
+                }
+            )
         }
     }
 }
@@ -165,7 +179,8 @@ private fun FamilyCoreSection(
     focus: Individual,
     partner: Individual?,
     marriage: LifeEvent?,
-    onIndividualSelected: (String) -> Unit
+    onIndividualSelected: (String) -> Unit,
+    isCompact: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -173,23 +188,25 @@ private fun FamilyCoreSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            PersonCard(
-                individual = focus,
-                label = "Individual",
-                modifier = Modifier.weight(1f),
-                onClick = onIndividualSelected
-            )
-            PersonCard(
-                individual = partner,
-                label = "Partner",
-                modifier = Modifier.weight(1f),
-                onClick = onIndividualSelected
-            )
-        }
+        ResponsivePersonCardRow(
+            isCompact = isCompact,
+            first = { modifier ->
+                PersonCard(
+                    individual = focus,
+                    label = "Individual",
+                    modifier = modifier,
+                    onClick = onIndividualSelected
+                )
+            },
+            second = { modifier ->
+                PersonCard(
+                    individual = partner,
+                    label = "Partner",
+                    modifier = modifier,
+                    onClick = onIndividualSelected
+                )
+            }
+        )
         marriage?.description()?.let { description ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Text(
@@ -199,6 +216,31 @@ private fun FamilyCoreSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ResponsivePersonCardRow(
+    isCompact: Boolean,
+    first: @Composable (Modifier) -> Unit,
+    second: @Composable (Modifier) -> Unit
+) {
+    if (isCompact) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            first(Modifier.fillMaxWidth())
+            second(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            first(Modifier.weight(1f))
+            second(Modifier.weight(1f))
         }
     }
 }

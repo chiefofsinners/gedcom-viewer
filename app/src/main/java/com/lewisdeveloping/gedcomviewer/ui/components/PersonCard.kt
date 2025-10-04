@@ -144,7 +144,9 @@ private fun Avatar(initials: String, size: Dp = 56.dp) {
 
 private fun String.initials(): String =
     trim()
-        .split(" ")
-        .filter { it.isNotEmpty() }
+        .split(Regex("\\s+"))
+        .mapNotNull { token ->
+            token.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()
+        }
         .take(2)
-        .joinToString(separator = "") { it.first().uppercaseChar().toString() }
+        .joinToString(separator = "")
