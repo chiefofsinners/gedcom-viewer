@@ -31,7 +31,6 @@ import com.lewisdeveloping.gedcomviewer.model.Family
 import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
-import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonCard
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonRow
 
@@ -91,7 +90,7 @@ fun FamilyScreen(
             }
         } else {
             val partnerFamily = findFamily(focus.familiesAsSpouse, data)
-            val partner = partnerFamily?.let { it.partnerFor(focus, data) }
+            val partner = partnerFamily?.partnerFor(focus, data)
             val focusParents = findFamily(focus.familiesAsChild, data)
             val partnerParents = partner?.let { findFamily(it.familiesAsChild, data) }
             val children = partnerFamily?.childrenIds?.mapNotNull { data.individuals[it] } ?: emptyList()
@@ -101,7 +100,7 @@ fun FamilyScreen(
                     .padding(contentPadding)
                     .fillMaxSize()
             ) {
-                val isCompact = maxWidth < 600.dp
+                val isCompact = this.maxWidth < 600.dp
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
