@@ -11,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,9 +21,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +54,7 @@ fun FamilyScreen(
     modifier: Modifier = Modifier
 ) {
     val focus = data.individuals[individualId]
+    var showDetails by remember(focus?.id) { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -57,6 +65,13 @@ fun FamilyScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (focus != null) {
+                        IconButton(onClick = { showDetails = true }) {
+                            Icon(imageVector = Icons.Outlined.Info, contentDescription = "Individual details")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -129,6 +144,103 @@ fun FamilyScreen(
                 }
             }
         }
+    }
+
+    if (showDetails && focus != null) {
+        IndividualDetailsDialog(
+            individual = focus,
+            onDismissRequest = { showDetails = false }
+        )
+    }
+}
+
+@Composable
+private fun IndividualDetailsDialog(
+    individual: Individual,
+    onDismissRequest: () -> Unit
+) {
+    val genderLabel = when (individual.gender) {
+        Individual.Gender.MALE -> "Male"
+        Individual.Gender.FEMALE -> "Female"
+        Individual.Gender.UNKNOWN -> "Unknown"
+    }
+
+    val detailItems = buildList {
+        add("Full name" to individual.displayName)
+        individual.givenName?.takeIf { it.isNotBlank() }?.let { add("Given name" to it) }
+        individual.surname?.takeIf { it.isNotBlank() }?.let { add("Surname" to it) }
+        add("Gender" to genderLabel)
+        individual.birth?.date?.takeIf { it.isNotBlank() }?.let { add("Birth date" to it) }
+        individual.birth?.place?.takeIf { it.isNotBlank() }?.let { add("Birth place" to it) }
+        individual.death?.date?.takeIf { it.isNotBlank() }?.let { add("Death date" to it) }
+        individual.death?.place?.takeIf { it.isNotBlank() }?.let { add("Death place" to it) }
+        individual.primaryObjectId?.takeIf { it.isNotBlank() }?.let { add("Primary object" to it) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null
+            )
+        },
+        title = {
+            Text(text = "Individual details")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (detailItems.isEmpty() && individual.notes.isEmpty()) {
+                    Text(
+                        text = "No additional information available.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    detailItems.forEach { (label, value) ->
+                        DetailRow(label = label, value = value)
+                    }
+
+                    if (individual.notes.isNotEmpty()) {
+                        Text(
+                            text = "Notes",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            individual.notes.forEach { note ->
+                                Text(
+                                    text = "• $note",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = "Close")
+            }
+        }
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
