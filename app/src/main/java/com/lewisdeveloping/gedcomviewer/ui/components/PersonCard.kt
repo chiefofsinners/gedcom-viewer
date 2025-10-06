@@ -1,29 +1,17 @@
 package com.lewisdeveloping.gedcomviewer.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.model.Individual
 
@@ -48,39 +36,38 @@ fun PersonCard(
             contentColor = MaterialTheme.colorScheme.onSurface
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             label?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Avatar(initials = individual?.displayName?.initials().orEmpty())
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = individual?.displayName ?: "Unknown",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2
+                )
+                individual?.birth?.description()?.let { description ->
                     Text(
-                        text = individual?.displayName ?: "Unknown",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2
+                        text = "Born: $description",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    individual?.birth?.description()?.let { description ->
-                        Text(
-                            text = "Born: $description",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    individual?.death?.description()?.let { description ->
-                        Text(
-                            text = "Died: $description",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                }
+                individual?.death?.description()?.let { description ->
+                    Text(
+                        text = "Died: $description",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -102,54 +89,21 @@ fun PersonRow(
         modifier.fillMaxWidth()
     }
 
-    Row(
+    Column(
         modifier = clickableModifier.padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Avatar(initials = individual?.displayName?.initials().orEmpty(), size = 44.dp)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = individual?.displayName ?: "Unknown",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-            supportingText?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun Avatar(initials: String, size: Dp = 56.dp) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .aspectRatio(1f)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondaryContainer),
-        contentAlignment = Alignment.Center
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = if (initials.isNotBlank()) initials else "?",
+            text = individual?.displayName ?: "Unknown",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
+            fontWeight = FontWeight.Medium
         )
+        supportingText?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
-
-private fun String.initials(): String =
-    trim()
-        .split(Regex("\\s+"))
-        .mapNotNull { token ->
-            token.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()
-        }
-        .take(2)
-        .joinToString(separator = "")

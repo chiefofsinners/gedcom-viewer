@@ -92,7 +92,6 @@ fun FamilyScreen(
             val partnerFamily = findFamily(focus.familiesAsSpouse, data)
             val partner = partnerFamily?.partnerFor(focus, data)
             val focusParents = findFamily(focus.familiesAsChild, data)
-            val partnerParents = partner?.let { findFamily(it.familiesAsChild, data) }
             val children = partnerFamily?.childrenIds?.mapNotNull { data.individuals[it] } ?: emptyList()
 
             BoxWithConstraints(
@@ -110,7 +109,6 @@ fun FamilyScreen(
                 ) {
                     ParentsSection(
                         focusParents = focusParents,
-                        partnerParents = partnerParents,
                         data = data,
                         onIndividualSelected = onIndividualSelected,
                         isCompact = isCompact
@@ -137,7 +135,6 @@ fun FamilyScreen(
 @Composable
 private fun ParentsSection(
     focusParents: Family?,
-    partnerParents: Family?,
     data: GedcomData,
     onIndividualSelected: (String) -> Unit,
     isCompact: Boolean
@@ -167,32 +164,6 @@ private fun ParentsSection(
                 )
             }
         )
-        partnerParents?.let {
-            Text(
-                text = "Spouse's Parents",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            ResponsivePersonCardRow(
-                isCompact = isCompact,
-                first = { modifier ->
-                    PersonCard(
-                        individual = it.husbandId?.let { id -> data.individuals[id] },
-                        label = "Father-in-law",
-                        modifier = modifier,
-                        onClick = onIndividualSelected
-                    )
-                },
-                second = { modifier ->
-                    PersonCard(
-                        individual = it.wifeId?.let { id -> data.individuals[id] },
-                        label = "Mother-in-law",
-                        modifier = modifier,
-                        onClick = onIndividualSelected
-                    )
-                }
-            )
-        }
     }
 }
 
