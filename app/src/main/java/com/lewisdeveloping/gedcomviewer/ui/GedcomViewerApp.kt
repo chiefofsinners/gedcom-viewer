@@ -44,7 +44,11 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     val context = LocalContext.current
     val data = uiState.data
     val errorMessage = uiState.error
-    val startDestination = if (uiState.needsFileSelection) Routes.Home else Routes.Individuals
+    val startDestination = if (uiState.needsFileSelection && uiState.data == null) {
+        Routes.Home
+    } else {
+        Routes.Individuals
+    }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {

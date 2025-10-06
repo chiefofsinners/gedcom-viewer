@@ -1,6 +1,8 @@
 package com.lewisdeveloping.gedcomviewer.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.lewisdeveloping.gedcomviewer.data.GedcomData
 import com.lewisdeveloping.gedcomviewer.model.Family
 import com.lewisdeveloping.gedcomviewer.model.Individual
@@ -171,6 +174,10 @@ private fun IndividualDetailsDialog(
     val configuration = LocalConfiguration.current
     val maxDialogHeight = configuration.screenHeightDp.dp * 0.9f
     val scrollState = rememberScrollState()
+    val isPhonePortrait = configuration.smallestScreenWidthDp < 600 &&
+        configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val dialogHorizontalPadding = if (isPhonePortrait) 12.dp else 24.dp
+    val dialogVerticalPadding = if (isPhonePortrait) 12.dp else 24.dp
 
     val genderLabel = when (individual.gender) {
         Individual.Gender.MALE -> "Male"
@@ -190,74 +197,88 @@ private fun IndividualDetailsDialog(
         individual.primaryObjectId?.takeIf { it.isNotBlank() }?.let { add("Primary object" to it) }
     }
 
-    BasicAlertDialog(onDismissRequest = onDismissRequest) {
-        Surface(
+    val contentPadding = if (isPhonePortrait) 16.dp else 24.dp
+    val sectionSpacing = if (isPhonePortrait) 16.dp else 24.dp
+    val detailSpacing = if (isPhonePortrait) 12.dp else 16.dp
+    val noteSpacing = if (isPhonePortrait) 6.dp else 8.dp
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = maxDialogHeight),
-            shape = MaterialTheme.shapes.extraLarge,
-            tonalElevation = 6.dp,
-            color = MaterialTheme.colorScheme.surface
+                .padding(horizontal = dialogHorizontalPadding, vertical = dialogVerticalPadding)
         ) {
-            Column(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(scrollState)
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .heightIn(max = maxDialogHeight),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                color = MaterialTheme.colorScheme.surface
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState)
+                        .padding(contentPadding),
+                    verticalArrangement = Arrangement.spacedBy(sectionSpacing)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Individual details",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    if (detailItems.isEmpty() && individual.notes.isEmpty()) {
-                        Text(
-                            text = "No additional information available.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    } else {
-                        detailItems.forEach { (label, value) ->
-                            DetailRow(label = label, value = value)
-                        }
+                        Text(
+                            text = "Individual details",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                    }
 
-                        if (individual.notes.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Notes",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                individual.notes.forEach { note ->
+                    Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
+                        if (detailItems.isEmpty() && individual.notes.isEmpty()) {
+                            Text(
+                                text = "No additional information available.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            detailItems.forEach { (label, value) ->
+                                DetailRow(label = label, value = value)
+                            }
+
+                            if (individual.notes.isNotEmpty()) {
+                                Column(verticalArrangement = Arrangement.spacedBy(noteSpacing)) {
                                     Text(
-                                        text = "• $note",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = "Notes",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold
                                     )
+                                    individual.notes.forEach { note ->
+                                        Text(
+                                            text = "• $note",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismissRequest) {
-                        Text(text = "Close")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismissRequest) {
+                            Text(text = "Close")
+                        }
                     }
                 }
             }
@@ -407,6 +428,7 @@ private fun ChildrenSection(
         )
         if (children.isEmpty()) {
             Card(
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface
