@@ -91,12 +91,6 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(uiState.currentDocumentUri, uiState.isSampleData, uiState.data) {
-        if (!uiState.needsFileSelection && uiState.data != null) {
-            navigateToIndex()
-        }
-    }
-
     GedcomViewerTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
