@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,7 +33,6 @@ import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonCard
-import com.lewisdeveloping.gedcomviewer.ui.components.PersonRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,7 +124,8 @@ fun FamilyScreen(
 
                     ChildrenSection(
                         children = children,
-                        onIndividualSelected = onIndividualSelected
+                        onIndividualSelected = onIndividualSelected,
+                        isCompact = isCompact
                     )
                 }
             }
@@ -246,7 +247,8 @@ private fun ResponsivePersonCardRow(
 @Composable
 private fun ChildrenSection(
     children: List<Individual>,
-    onIndividualSelected: (String) -> Unit
+    onIndividualSelected: (String) -> Unit,
+    isCompact: Boolean
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val header = if (children.isEmpty()) "Children" else "Children (${children.size})"
@@ -255,26 +257,38 @@ private fun ChildrenSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        val cardColors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-        Card(colors = cardColors) {
-            if (children.isEmpty()) {
+        if (children.isEmpty()) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
                 Text(
                     text = "No recorded children",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else {
-                Column {
-                    children.forEach { child ->
-                        PersonRow(
-                            individual = child,
-                            supportingText = child.birth?.description(),
-                            onClick = onIndividualSelected
-                        )
+            }
+        } else {
+            val columns = if (isCompact) 2 else if (children.size >= 3) 3 else 2
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                children.chunked(columns).forEach { rowChildren ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowChildren.forEach { child ->
+                            PersonCard(
+                                individual = child,
+                                modifier = Modifier.weight(1f),
+                                onClick = onIndividualSelected
+                            )
+                        }
+                        repeat(columns - rowChildren.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
