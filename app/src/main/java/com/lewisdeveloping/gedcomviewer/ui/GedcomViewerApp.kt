@@ -44,7 +44,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     val context = LocalContext.current
     val data = uiState.data
     val errorMessage = uiState.error
-    val startDestination = if (uiState.needsFileSelection && uiState.data == null) {
+    val startDestination = if (uiState.needsFileSelection) {
         Routes.Home
     } else {
         Routes.Individuals
@@ -117,12 +117,23 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                 }
                 composable(Routes.Individuals) {
                     if (data == null) {
-                        // Should not normally happen, but guard to avoid crashes.
-                        Text(
-                            text = "No GEDCOM data loaded",
-                            modifier = Modifier.padding(24.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        when {
+                            uiState.isLoading -> {
+                                // Loading overlay handles progress indicator; leave space here.
+                                Box(modifier = Modifier.fillMaxSize())
+                            }
+                            uiState.needsFileSelection -> {
+                                Text(
+                                    text = "No GEDCOM data loaded",
+                                    modifier = Modifier.padding(24.dp),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                            else -> {
+                                // Fallback guard: show empty container rather than flashing text.
+                                Box(modifier = Modifier.fillMaxSize())
+                            }
+                        }
                     } else {
                         IndividualsScreen(
                             individuals = data.individualsSortedByName,

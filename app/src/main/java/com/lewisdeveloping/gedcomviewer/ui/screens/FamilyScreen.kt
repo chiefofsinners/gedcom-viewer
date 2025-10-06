@@ -120,9 +120,16 @@ fun FamilyScreen(
                     .padding(contentPadding)
                     .fillMaxSize()
             ) {
+                val configuration = LocalConfiguration.current
                 val constraintsMaxWidth = maxWidth
                 val constraintsMaxHeight = maxHeight
                 val isCompact = constraintsMaxWidth < 600.dp
+                val isTablet = configuration.smallestScreenWidthDp >= 600
+                val orientation = configuration.orientation
+                val stackChildrenVertically = !isTablet &&
+                    (isCompact || orientation == Configuration.ORIENTATION_PORTRAIT ||
+                        constraintsMaxHeight >= constraintsMaxWidth)
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -144,8 +151,6 @@ fun FamilyScreen(
                         onIndividualSelected = onIndividualSelected,
                         isCompact = isCompact
                     )
-
-                    val stackChildrenVertically = isCompact || constraintsMaxHeight >= constraintsMaxWidth
 
                     ChildrenSection(
                         children = children,
@@ -427,19 +432,42 @@ private fun ChildrenSection(
             fontWeight = FontWeight.SemiBold
         )
         if (children.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                Text(
-                    text = "No recorded children",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (stackVertically) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
+                    Text(
+                        text = "No recorded children",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text(
+                            text = "No recorded children",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         } else {
             if (stackVertically) {
