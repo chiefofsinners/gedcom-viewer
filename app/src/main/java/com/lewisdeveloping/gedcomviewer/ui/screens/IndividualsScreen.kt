@@ -2,7 +2,6 @@ package com.lewisdeveloping.gedcomviewer.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,14 +14,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,12 +35,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.R
 import com.lewisdeveloping.gedcomviewer.model.Individual
+import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonRow
+import com.lewisdeveloping.gedcomviewer.ui.theme.GedcomViewerTheme
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -104,21 +106,16 @@ fun IndividualsScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = displayTitle,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        text = displayTitle,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -247,6 +244,46 @@ fun IndividualsScreen(
     }
 }
 
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360, heightDp = 640)
+@Composable
+private fun IndividualsScreenPreview() {
+    val individuals = listOf(
+        Individual(
+            id = "I1",
+            fullName = "Anthony Edward Munro",
+            givenName = "Anthony",
+            surname = "Munro",
+            gender = Individual.Gender.MALE,
+            birth = LifeEvent(date = "12 JAN 1922", place = "Cheltenham, Gloucestershire, England")
+        ),
+        Individual(
+            id = "I2",
+            fullName = "Julia Amanda Fish",
+            givenName = "Julia",
+            surname = "Fish",
+            gender = Individual.Gender.FEMALE,
+            birth = LifeEvent(date = "12 JAN 1925", place = "Greenwich, London, England")
+        ),
+        Individual(
+            id = "I3",
+            fullName = "Nigel Raymond Munro",
+            givenName = "Nigel",
+            surname = "Munro",
+            gender = Individual.Gender.MALE
+        )
+    )
+
+    GedcomViewerTheme {
+        IndividualsScreen(
+            individuals = individuals,
+            currentFileName = "Sample-GEDCOM.ged",
+            onOpenFile = {},
+            onNavigateHome = {},
+            onNavigateIndex = {},
+            onIndividualSelected = {}
+        )
+    }
+}
 private data class IndividualSection(val title: Char, val members: List<Individual>)
 
 private fun buildSections(individuals: List<Individual>): List<IndividualSection> {
