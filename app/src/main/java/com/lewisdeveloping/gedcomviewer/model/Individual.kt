@@ -10,6 +10,7 @@ data class Individual(
     val death: LifeEvent? = null,
     val familiesAsSpouse: List<String> = emptyList(),
     val familiesAsChild: List<String> = emptyList(),
+    val timeline: List<TimelineEntry> = emptyList(),
     val notes: List<String> = emptyList(),
     val primaryObjectId: String? = null
 ) {

@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -44,6 +45,7 @@ import com.lewisdeveloping.gedcomviewer.data.GedcomData
 import com.lewisdeveloping.gedcomviewer.model.Family
 import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.LifeEvent
+import com.lewisdeveloping.gedcomviewer.model.TimelineEntry
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonCard
 
@@ -195,12 +197,13 @@ private fun IndividualDetailsDialog(
         individual.givenName?.takeIf { it.isNotBlank() }?.let { add("Given name" to it) }
         individual.surname?.takeIf { it.isNotBlank() }?.let { add("Surname" to it) }
         add("Gender" to genderLabel)
-        individual.birth?.date?.takeIf { it.isNotBlank() }?.let { add("Birth date" to it) }
-        individual.birth?.place?.takeIf { it.isNotBlank() }?.let { add("Birth place" to it) }
-        individual.death?.date?.takeIf { it.isNotBlank() }?.let { add("Death date" to it) }
-        individual.death?.place?.takeIf { it.isNotBlank() }?.let { add("Death place" to it) }
         individual.primaryObjectId?.takeIf { it.isNotBlank() }?.let { add("Primary object" to it) }
     }
+
+    val timelineEntries = individual.timeline
+
+    val additionalNotes = individual.notes
+        .mapNotNull { it.takeIf { text -> text.isNotBlank() } }
 
     val contentPadding = if (isPhonePortrait) 16.dp else 24.dp
     val sectionSpacing = if (isPhonePortrait) 16.dp else 24.dp
@@ -246,8 +249,10 @@ private fun IndividualDetailsDialog(
                         )
                     }
 
+                    val hasContent = detailItems.isNotEmpty() || timelineEntries.isNotEmpty() || additionalNotes.isNotEmpty()
+
                     Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
-                        if (detailItems.isEmpty() && individual.notes.isEmpty()) {
+                        if (!hasContent) {
                             Text(
                                 text = "No additional information available.",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -257,22 +262,30 @@ private fun IndividualDetailsDialog(
                             detailItems.forEach { (label, value) ->
                                 DetailRow(label = label, value = value)
                             }
+                        }
+                    }
 
-                            if (individual.notes.isNotEmpty()) {
-                                Column(verticalArrangement = Arrangement.spacedBy(noteSpacing)) {
-                                    Text(
-                                        text = "Notes",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    individual.notes.forEach { note ->
-                                        Text(
-                                            text = "• $note",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
+                    if (timelineEntries.isNotEmpty()) {
+                        TimelineSection(
+                            timeline = timelineEntries,
+                            detailSpacing = detailSpacing,
+                            noteSpacing = noteSpacing
+                        )
+                    }
+
+                    if (additionalNotes.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(noteSpacing)) {
+                            Text(
+                                text = "Additional notes",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            additionalNotes.forEach { note ->
+                                Text(
+                                    text = "• $note",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     }
@@ -285,6 +298,81 @@ private fun IndividualDetailsDialog(
                             Text(text = "Close")
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineSection(
+    timeline: List<TimelineEntry>,
+    detailSpacing: Dp,
+    noteSpacing: Dp
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
+        Text(
+            text = "Timeline",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
+            timeline.forEach { entry ->
+                TimelineEventItem(entry = entry, noteSpacing = noteSpacing)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineEventItem(
+    entry: TimelineEntry,
+    noteSpacing: Dp
+) {
+    val event = entry.event
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val headline = buildString {
+            append(entry.label)
+            event.value?.takeIf { it.isNotBlank() }?.let {
+                append(": ")
+                append(it)
+            }
+        }
+        Text(
+            text = headline,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        val keyDetails = mutableListOf<Pair<String, String>>()
+        event.date?.takeIf { it.isNotBlank() }?.let { keyDetails.add("Date" to it) }
+        event.place?.takeIf { it.isNotBlank() }?.let { keyDetails.add("Place" to it) }
+        event.address?.takeIf { it.isNotBlank() }?.let { keyDetails.add("Address" to it) }
+
+        keyDetails.forEach { (label, value) ->
+            DetailRow(label = label, value = value)
+        }
+
+        event.details.forEach { (label, values) ->
+            values.filter { it.isNotBlank() }.forEach { value ->
+                DetailRow(label = label, value = value)
+            }
+        }
+
+        if (event.notes.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(noteSpacing)) {
+                Text(
+                    text = "Notes",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                event.notes.forEach { note ->
+                    Text(
+                        text = "• $note",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
