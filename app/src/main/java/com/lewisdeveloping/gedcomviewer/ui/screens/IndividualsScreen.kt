@@ -110,9 +110,7 @@ fun IndividualsScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = displayTitle,
-                        maxLines = 1,
-                        textAlign = TextAlign.Center
+                        text = displayTitle
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
