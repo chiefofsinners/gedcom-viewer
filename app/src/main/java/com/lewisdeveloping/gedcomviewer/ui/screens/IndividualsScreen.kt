@@ -2,6 +2,7 @@ package com.lewisdeveloping.gedcomviewer.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,19 @@ fun IndividualsScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    val appTitle = stringResource(id = R.string.app_name)
+    val displayTitle = remember(currentFileName) {
+        currentFileName
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { name ->
+                if (name.lowercase(Locale.getDefault()).endsWith(".ged")) {
+                    name.dropLast(4)
+                } else {
+                    name
+                }
+            }
+    } ?: appTitle
 
     val filteredIndividuals = remember(individuals, searchQuery) {
         val query = searchQuery.trim().lowercase()
@@ -95,7 +109,16 @@ fun IndividualsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text = currentFileName?.ifBlank { null } ?: stringResource(id = R.string.app_name))
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = displayTitle,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,

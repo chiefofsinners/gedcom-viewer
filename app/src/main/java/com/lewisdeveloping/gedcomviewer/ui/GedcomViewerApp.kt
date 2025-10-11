@@ -45,9 +45,9 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     val data = uiState.data
     val errorMessage = uiState.error
     val startDestination = if (uiState.needsFileSelection) {
-        Routes.Home
+        Routes.HOME
     } else {
-        Routes.Individuals
+        Routes.INDIVIDUALS
     }
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -68,19 +68,19 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     }
 
     val navigateToHome: () -> Unit = {
-        if (navController.currentDestination?.route != Routes.Home) {
-            navController.navigate(Routes.Home) {
+        if (navController.currentDestination?.route != Routes.HOME) {
+            navController.navigate(Routes.HOME) {
                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 launchSingleTop = true
             }
         }
     }
     val navigateToIndex: () -> Unit = {
-        if (navController.currentDestination?.route != Routes.Individuals) {
-            val popped = navController.popBackStack(Routes.Individuals, false)
+        if (navController.currentDestination?.route != Routes.INDIVIDUALS) {
+            val popped = navController.popBackStack(Routes.INDIVIDUALS, false)
             if (!popped) {
-                navController.navigate(Routes.Individuals) {
-                    popUpTo(Routes.Home) { inclusive = false }
+                navController.navigate(Routes.INDIVIDUALS) {
+                    popUpTo(Routes.HOME) { inclusive = false }
                     launchSingleTop = true
                 }
             }
@@ -90,7 +90,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     LaunchedEffect(uiState.needsFileSelection, uiState.data) {
         if (uiState.needsFileSelection) {
             navigateToHome()
-        } else if (uiState.data != null && navController.currentDestination?.route == Routes.Home) {
+        } else if (uiState.data != null && navController.currentDestination?.route == Routes.HOME) {
             navigateToIndex()
         }
     }
@@ -101,7 +101,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                 navController = navController,
                 startDestination = startDestination
             ) {
-                composable(Routes.Home) {
+                composable(Routes.HOME) {
                     HomeScreen(
                         errorMessage = errorMessage,
                         hasData = data != null,
@@ -115,7 +115,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         }
                     )
                 }
-                composable(Routes.Individuals) {
+                composable(Routes.INDIVIDUALS) {
                     if (data == null) {
                         when {
                             uiState.isLoading -> {
@@ -145,16 +145,16 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                             },
                             onNavigateIndex = { /* Already on index, no-op */ },
                             onIndividualSelected = { id ->
-                                navController.navigate("${Routes.Family}/$id")
+                                navController.navigate("${Routes.FAMILY}/$id")
                             }
                         )
                     }
                 }
                 composable(
-                    route = "${Routes.Family}/{${Routes.FamilyArg}}",
-                    arguments = listOf(navArgument(Routes.FamilyArg) { type = NavType.StringType })
+                    route = "${Routes.FAMILY}/{${Routes.FAMILYARG}}",
+                    arguments = listOf(navArgument(Routes.FAMILYARG) { type = NavType.StringType })
                 ) { entry ->
-                    val individualId = entry.arguments?.getString(Routes.FamilyArg) ?: return@composable
+                    val individualId = entry.arguments?.getString(Routes.FAMILYARG) ?: return@composable
                     if (data == null) {
                         Text(
                             text = "Family data unavailable",
@@ -168,7 +168,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                             onNavigateBack = { navController.popBackStack() },
                             onIndividualSelected = { targetId ->
                                 if (targetId != individualId) {
-                                    navController.navigate("${Routes.Family}/$targetId")
+                                    navController.navigate("${Routes.FAMILY}/$targetId")
                                 }
                             },
                             onNavigateHome = {
@@ -291,8 +291,8 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 }
 
 private object Routes {
-    const val Home = "home"
-    const val Individuals = "individuals"
-    const val Family = "family"
-    const val FamilyArg = "individualId"
+    const val HOME = "home"
+    const val INDIVIDUALS = "individuals"
+    const val FAMILY = "family"
+    const val FAMILYARG = "individualId"
 }
