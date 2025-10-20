@@ -33,6 +33,16 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadFromUri(uri: Uri) {
         val displayName = resolveDisplayName(uri)
+        if (!isGedcomFile(uri, displayName)) {
+            val current = _uiState.value
+            val message = "Unsupported file type. Please select a .ged GEDCOM file."
+            _uiState.value = current.copy(
+                isLoading = false,
+                error = message,
+                needsFileSelection = true
+            )
+            return
+        }
         loadFromUriInternal(uri, displayName)
     }
 
@@ -166,13 +176,14 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     isSampleData = false
                 )
             } catch (error: Throwable) {
-                clearSavedSource()
                 if (previousState.data != null) {
                     _uiState.value = previousState.copy(
                         isLoading = false,
-                        error = error.message ?: "Unable to load file"
+                        error = error.message ?: "Unable to load file",
+                        needsFileSelection = true
                     )
                 } else {
+                    clearSavedSource()
                     _uiState.value = GedcomUiState(
                         isLoading = false,
                         error = error.message ?: "Unable to load file",
@@ -237,6 +248,19 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         cachedUri = uri
         cachedFileName = displayName
         cachedIsSample = isSample
+    }
+
+    private fun isGedcomFile(uri: Uri, displayName: String?): Boolean {
+        val candidates = buildList {
+            displayName?.let { add(it) }
+            uri.lastPathSegment?.let { add(it) }
+            add(uri.toString())
+        }
+        return candidates.any { name ->
+            val trimmed = name.trim()
+            val dotIndex = trimmed.lastIndexOf('.')
+            dotIndex >= 0 && trimmed.substring(dotIndex + 1).equals("ged", ignoreCase = true)
+        }
     }
 
     companion object {

@@ -45,6 +45,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
 
     var familyStack by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var currentTab by rememberSaveable { mutableStateOf(FileActionBarSelection.HOME) }
+    val showFullScreenLoading = uiState.isLoading && !uiState.needsFileSelection
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -76,6 +77,12 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
+    LaunchedEffect(showFullScreenLoading) {
+        if (showFullScreenLoading) {
+            currentTab = FileActionBarSelection.INDEX
+        }
+    }
+
     LaunchedEffect(data) {
         if (data == null) {
             familyStack = emptyList()
@@ -96,7 +103,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
-    BackHandler(enabled = currentTab == FileActionBarSelection.FAMILY && familyStack.isNotEmpty()) {
+    BackHandler(enabled = !showFullScreenLoading && currentTab == FileActionBarSelection.FAMILY && familyStack.isNotEmpty()) {
         popFamily()
     }
 
@@ -134,6 +141,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     GedcomViewerTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
+                showFullScreenLoading -> LoadingScreen()
                 uiState.needsFileSelection || currentTab == FileActionBarSelection.HOME -> {
                     HomeScreen(
                         errorMessage = errorMessage,
@@ -181,12 +189,6 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                             onIndividualSelected = pushFamily
                         )
                     }
-                }
-            }
-
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
                 }
             }
 
@@ -287,5 +289,12 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
                 Text(text = "Retry")
             }
         }
+    }
+}
+
+@Composable
+private fun LoadingScreen() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
     }
 }
