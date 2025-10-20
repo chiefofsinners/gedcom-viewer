@@ -2,7 +2,7 @@ package com.lewisdeveloping.gedcomviewer.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -13,18 +13,20 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
-enum class FileActionBarSelection { HOME, INDEX }
+enum class FileActionBarSelection { HOME, INDEX, FAMILY }
 
 @Composable
 fun FileActionBar(
     selected: FileActionBarSelection?,
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
-    onOpenFile: () -> Unit,
-    indexEnabled: Boolean = true
+    onNavigateFamily: () -> Unit,
+    indexEnabled: Boolean = true,
+    familyEnabled: Boolean = true
 ) {
     val homeClick = if (selected == FileActionBarSelection.HOME) ({}) else onNavigateHome
     val indexClick = if (!indexEnabled || selected == FileActionBarSelection.INDEX) ({}) else onNavigateIndex
+    val familyClick = if (!familyEnabled || selected == FileActionBarSelection.FAMILY) ({}) else onNavigateFamily
 
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -56,10 +58,11 @@ fun FileActionBar(
             colors = navItemColors
         )
         NavigationBarItem(
-            selected = false,
-            onClick = onOpenFile,
-            icon = { Icon(imageVector = Icons.Filled.FolderOpen, contentDescription = "Open GEDCOM") },
-            label = { Text(text = "Open") },
+            selected = selected == FileActionBarSelection.FAMILY,
+            enabled = familyEnabled,
+            onClick = familyClick,
+            icon = { Icon(imageVector = Icons.Filled.Group, contentDescription = "Family connections") },
+            label = { Text(text = "Family") },
             colors = navItemColors
         )
     }

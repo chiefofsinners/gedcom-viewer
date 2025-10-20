@@ -41,6 +41,7 @@ import com.lewisdeveloping.gedcomviewer.model.Family
 import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
+import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.IndividualDetailsDialog
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonCard
 
@@ -53,7 +54,8 @@ fun FamilyScreen(
     onIndividualSelected: (String) -> Unit,
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
-    onOpenFile: () -> Unit,
+    onNavigateFamily: () -> Unit,
+    familyEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     val focus = data.individuals[individualId]
@@ -89,10 +91,11 @@ fun FamilyScreen(
         },
         bottomBar = {
             FileActionBar(
-                selected = null,
+                selected = FileActionBarSelection.FAMILY,
                 onNavigateHome = onNavigateHome,
                 onNavigateIndex = onNavigateIndex,
-                onOpenFile = onOpenFile
+                onNavigateFamily = onNavigateFamily,
+                familyEnabled = familyEnabled
             )
         }
     ) { contentPadding ->

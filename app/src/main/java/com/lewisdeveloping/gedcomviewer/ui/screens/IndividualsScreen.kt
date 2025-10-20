@@ -52,9 +52,10 @@ import java.util.Locale
 fun IndividualsScreen(
     individuals: List<Individual>,
     currentFileName: String?,
-    onOpenFile: () -> Unit,
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
+    onNavigateFamily: () -> Unit,
+    familyEnabled: Boolean,
     onIndividualSelected: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -128,7 +129,8 @@ fun IndividualsScreen(
                 selected = FileActionBarSelection.INDEX,
                 onNavigateHome = onNavigateHome,
                 onNavigateIndex = onNavigateIndex,
-                onOpenFile = onOpenFile
+                onNavigateFamily = onNavigateFamily,
+                familyEnabled = familyEnabled
             )
         }
     ) { contentPadding ->
@@ -273,9 +275,10 @@ private fun IndividualsScreenPreview() {
         IndividualsScreen(
             individuals = individuals,
             currentFileName = "Sample-GEDCOM.ged",
-            onOpenFile = {},
             onNavigateHome = {},
             onNavigateIndex = {},
+            onNavigateFamily = {},
+            familyEnabled = false,
             onIndividualSelected = {}
         )
     }
