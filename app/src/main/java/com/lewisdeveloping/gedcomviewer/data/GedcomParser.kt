@@ -111,6 +111,10 @@ class GedcomParser {
                                     individual.setName(value.orEmpty())
                                     handled = true
                                 }
+                                tag == "TITL" -> {
+                                    individual.setTitle(value)
+                                    handled = true
+                                }
                                 tag == "SEX" -> {
                                     individual.setGender(value)
                                     handled = true
@@ -129,6 +133,10 @@ class GedcomParser {
                                 }
                                 tag == "NOTE" -> {
                                     individual.addNote(value, pointerId)
+                                    handled = true
+                                }
+                                parentTag == "TITL" && (tag == "CONC" || tag == "CONT") -> {
+                                    individual.appendTitleContinuation(tag, value)
                                     handled = true
                                 }
                                 parentTag == "NOTE" && (tag == "CONC" || tag == "CONT") -> {
@@ -216,9 +224,11 @@ class GedcomParser {
         .ifBlank { tag }
 
     private class IndividualBuilder(val id: String) {
-        private var fullName: String = id
+        private var fullName: String = ""
         private var givenName: String? = null
         private var surname: String? = null
+        private var title: String? = null
+        private var titleBuilder: StringBuilder? = null
         private var gender: Gender = Gender.UNKNOWN
 
         private val birthEvent = LifeEventBuilder()
@@ -239,6 +249,22 @@ class GedcomParser {
             val suffix = parts.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }
             val constructed = listOfNotNull(givenName, surname, suffix).filter { it.isNotBlank() }
             fullName = constructed.joinToString(" ").ifBlank { raw.replace("/", "").trim() }
+        }
+
+        fun setTitle(raw: String?) {
+            val trimmed = raw?.trim().takeIf { it?.isNotEmpty() == true } ?: return
+            titleBuilder = StringBuilder(trimmed)
+            title = trimmed
+        }
+
+        fun appendTitleContinuation(tag: String, raw: String?) {
+            val value = raw ?: return
+            val builder = titleBuilder ?: title?.let { existing ->
+                StringBuilder(existing)
+            }?.also { titleBuilder = it } ?: return
+            if (tag == "CONT") builder.append('\n')
+            builder.append(value)
+            title = builder.toString()
         }
 
         fun setGender(raw: String?) {
@@ -285,12 +311,16 @@ class GedcomParser {
                     TimelineEntry(tag = entry.tag, label = entry.label, event = event)
                 }
             }
+            val resolvedFullName = fullName.trim()
+            val resolvedTitle = titleBuilder?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: title?.trim()?.takeIf { it.isNotEmpty() }
 
             return Individual(
                 id = id,
-                fullName = fullName,
+                fullName = resolvedFullName,
                 givenName = givenName,
                 surname = surname,
+                title = resolvedTitle,
                 gender = gender,
                 birth = birth,
                 death = death,

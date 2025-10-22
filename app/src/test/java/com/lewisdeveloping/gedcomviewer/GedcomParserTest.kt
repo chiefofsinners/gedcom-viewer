@@ -39,4 +39,62 @@ class GedcomParserTest {
         assertTrue("Expected individuals to be parsed", data.individuals.isNotEmpty())
         assertTrue("Expected families to be parsed", data.families.isNotEmpty())
     }
+
+    @Test
+    fun fallsBackToTitleWhenNameMissing() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 TITL Duke of Testing
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("Duke of Testing", individual.displayName)
+        assertEquals("Duke of Testing", individual.title)
+        assertTrue(individual.fullName.isBlank())
+    }
+
+    @Test
+    fun qualifiesNameWithTitleWhenBothPresent() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Jane /Doe/
+            1 TITL PhD
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("Jane Doe (PhD)", individual.displayName)
+        assertEquals("Jane Doe", individual.fullName)
+        assertEquals("PhD", individual.title)
+    }
+
+    @Test
+    fun displaysUnnamedWhenNameAndTitleMissing() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 SEX F
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("Unnamed", individual.displayName)
+        assertTrue(individual.fullName.isBlank())
+        assertTrue(individual.title.isNullOrBlank())
+    }
 }
