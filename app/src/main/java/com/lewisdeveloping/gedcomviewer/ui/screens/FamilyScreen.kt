@@ -1,15 +1,14 @@
 package com.lewisdeveloping.gedcomviewer.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,7 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.data.GedcomData
@@ -60,9 +63,29 @@ fun FamilyScreen(
 ) {
     val focus = data.individuals[individualId]
     var showDetails by remember(focus?.id) { mutableStateOf(false) }
+    val swipeThreshold = with(LocalDensity.current) { 80.dp.toPx() }
+    val swipeModifier = Modifier.pointerInput(onNavigateBack, swipeThreshold) {
+        var totalHorizontalDrag = 0f
+        detectHorizontalDragGestures(
+            onDragStart = {
+                totalHorizontalDrag = 0f
+            },
+            onHorizontalDrag = { change, dragAmount ->
+                totalHorizontalDrag += dragAmount
+                if (change.positionChange() != Offset.Zero) change.consume()
+            },
+            onDragEnd = {
+                if (totalHorizontalDrag >= swipeThreshold) {
+                    onNavigateBack()
+                }
+                totalHorizontalDrag = 0f
+            },
+            onDragCancel = { totalHorizontalDrag = 0f }
+        )
+    }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.then(swipeModifier),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
