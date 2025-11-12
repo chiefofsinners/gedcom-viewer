@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
 
-enum class InfoPanelStyle { Info, Error }
+enum class InfoPanelStyle { Info, Error, Surface }
 
 @Composable
 fun InfoPanel(
@@ -28,10 +28,12 @@ fun InfoPanel(
     val background = when (style) {
         InfoPanelStyle.Info -> colors.infoBackground
         InfoPanelStyle.Error -> colors.alertBackground
+        InfoPanelStyle.Surface -> colors.surface
     }
     val foreground = when (style) {
         InfoPanelStyle.Info -> colors.infoForeground
         InfoPanelStyle.Error -> colors.alertForeground
+        InfoPanelStyle.Surface -> colors.supportingText
     }
 
     Surface(
