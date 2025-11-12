@@ -14,8 +14,8 @@ android {
         applicationId = "com.lewisdeveloping.gedcomviewer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.08"
+        versionCode = 11
+        versionName = "1.51"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
