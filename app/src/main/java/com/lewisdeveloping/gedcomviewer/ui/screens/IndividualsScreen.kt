@@ -3,16 +3,21 @@ package com.lewisdeveloping.gedcomviewer.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.R
 import com.lewisdeveloping.gedcomviewer.model.Individual
@@ -177,6 +183,7 @@ fun IndividualsScreen(
                     )
                 },
                 singleLine = true,
+                shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = colors.surface,
                     unfocusedContainerColor = colors.surface,
@@ -193,6 +200,7 @@ fun IndividualsScreen(
             val indexLetters = remember(availableSections) {
                 availableSections.map { it.title }.distinct().sorted()
             }
+
             if (sections.isEmpty()) {
                 InfoPanel(
                     text = "No individuals found",
@@ -222,59 +230,72 @@ fun IndividualsScreen(
                                     Text(
                                         text = section.title.toString(),
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
-                            items(section.members, key = { it.id }) { individual ->
+                            itemsIndexed(section.members, key = { _, individual -> individual.id }) { index, individual ->
                                 PersonRow(
                                     individual = individual,
                                     supportingText = individual.birth?.description(),
                                     onClick = onIndividualSelected
                                 )
+                                if (index < section.members.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        thickness = 0.5.dp,
+                                        color = colors.border.copy(alpha = 0.3f)
+                                    )
+                                }
                             }
                         }
                     }
                     if (indexLetters.isNotEmpty()) {
-                        LazyColumn(
+                        BoxWithConstraints(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .width(56.dp)
                                 .padding(vertical = 8.dp, horizontal = 8.dp)
                                 .clip(RoundedCornerShape(18.dp))
                                 .background(colors.surface)
-                                .padding(vertical = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceEvenly,
-                            contentPadding = PaddingValues(vertical = 8.dp)
+                                .padding(vertical = 16.dp)
                         ) {
-                            itemsIndexed(
-                                items = indexLetters,
-                                key = { _, letter -> letter }
-                            ) { index, letter ->
-                                    Text(
-                                        text = letter.toString(),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                letterPositions[letter]?.let { targetIndex ->
-                                                    coroutineScope.launch {
-                                                        listState.animateScrollToItem(targetIndex)
-                                                    }
+                            val letterDividerSpacing = 12.dp
+                            val condensedLetters = remember(indexLetters, maxHeight) {
+                                condenseLetters(
+                                    letters = indexLetters,
+                                    availableHeight = maxHeight,
+                                    minLetterHeight = 28.dp,
+                                    dividerSpacing = letterDividerSpacing
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.fillMaxHeight(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = if (condensedLetters.size > 1) Arrangement.SpaceEvenly else Arrangement.Center
+                            ) {
+                                condensedLetters.forEachIndexed { index, letter ->
+                                    LetterIndexEntry(
+                                        letter = letter,
+                                        onClick = {
+                                            letterPositions[letter]?.let { targetIndex ->
+                                                coroutineScope.launch {
+                                                    listState.animateScrollToItem(targetIndex)
                                                 }
                                             }
-                                            .padding(vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    textAlign = TextAlign.Center,
-                                    color = colors.infoForeground
-                                )
-                                if (index != indexLetters.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 12.dp),
-                                        thickness = 0.5.dp,
-                                        color = colors.infoForeground.copy(alpha = 0.3f)
+                                        }
                                     )
+                                    if (index != condensedLetters.lastIndex) {
+                                        Spacer(modifier = Modifier.height(letterDividerSpacing / 2))
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 12.dp),
+                                            thickness = 0.5.dp,
+                                            color = colors.infoForeground.copy(alpha = 0.3f)
+                                        )
+                                        Spacer(modifier = Modifier.height(letterDividerSpacing / 2))
+                                    }
                                 }
                             }
                         }
@@ -381,4 +402,63 @@ private fun Individual.indexLetter(): Char {
     val nameSource = surname?.takeIf { it.isNotBlank() } ?: displayName
     val firstLetter = nameSource.firstOrNull { it.isLetter() } ?: '#'
     return firstLetter.uppercaseChar()
+}
+
+@Composable
+private fun LetterIndexEntry(
+    letter: Char,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 32.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = letter.toString(),
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+            color = AppTheme.colors.infoForeground
+        )
+    }
+}
+
+private fun condenseLetters(
+    letters: List<Char>,
+    availableHeight: Dp,
+    minLetterHeight: Dp,
+    dividerSpacing: Dp
+): List<Char> {
+    if (letters.isEmpty()) return emptyList()
+    val usableHeight = availableHeight.coerceAtLeast(0.dp).value
+    if (usableHeight <= 0f) return letters
+    val minHeightPx = minLetterHeight.coerceAtLeast(0.dp).value
+    val dividerPx = dividerSpacing.coerceAtLeast(0.dp).value
+
+    fun letterHeight(count: Int): Float {
+        if (count <= 0) return 0f
+        val dividerTotal = dividerPx * (count - 1).coerceAtLeast(0)
+        val letterSpace = (usableHeight - dividerTotal).coerceAtLeast(0f)
+        return if (count > 0) letterSpace / count else 0f
+    }
+
+    if (letterHeight(letters.size) >= minHeightPx) return letters
+
+    var stride = 2
+    var best = letters
+    val lastIndex = letters.lastIndex
+
+    while (stride <= letters.size) {
+        val candidate = letters.filterIndexed { index, _ ->
+            index == 0 || index == lastIndex || index % stride == 0
+        }
+        best = candidate
+        if (candidate.size <= 2 || letterHeight(candidate.size) >= minHeightPx) break
+        stride += 1
+    }
+
+    return best
 }

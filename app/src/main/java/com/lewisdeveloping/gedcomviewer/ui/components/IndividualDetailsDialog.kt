@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -61,7 +62,6 @@ fun IndividualDetailsDialog(
         individual.givenName?.takeIf { it.isNotBlank() }?.let { add("Given name" to it) }
         individual.surname?.takeIf { it.isNotBlank() }?.let { add("Surname" to it) }
         add("Gender" to genderLabel)
-        individual.primaryObjectId?.takeIf { it.isNotBlank() }?.let { add("Primary object" to it) }
     }
 
     val timelineEntries = individual.timeline
@@ -83,7 +83,7 @@ fun IndividualDetailsDialog(
                     .heightIn(max = maxDialogHeight),
                 shape = MaterialTheme.shapes.extraLarge,
                 tonalElevation = 6.dp,
-                color = themeColors.surface
+                color = themeColors.background
             ) {
                 Column(
                     modifier = Modifier
@@ -108,19 +108,29 @@ fun IndividualDetailsDialog(
                                 )
                         } else {
                             if (detailItems.isNotEmpty()) {
-                                Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
-                                    detailItems.forEach { (label, value) ->
-                                        DetailRow(label = label, value = value)
+                                DetailPanel(
+                                    title = "Summary",
+                                    verticalSpacing = detailSpacing
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
+                                        detailItems.forEach { (label, value) ->
+                                            DetailRow(label = label, value = value)
+                                        }
                                     }
                                 }
                             }
 
                             if (timelineEntries.isNotEmpty()) {
-                                TimelineSection(
-                                    timeline = timelineEntries,
-                                    detailSpacing = detailSpacing,
-                                    noteSpacing = noteSpacing
-                                )
+                                DetailPanel(
+                                    title = "Timeline",
+                                    verticalSpacing = detailSpacing
+                                ) {
+                                    TimelineSection(
+                                        timeline = timelineEntries,
+                                        detailSpacing = detailSpacing,
+                                        noteSpacing = noteSpacing
+                                    )
+                                }
                             }
 
                             if (additionalNotes.isNotEmpty()) {
@@ -176,15 +186,8 @@ private fun TimelineSection(
     noteSpacing: Dp
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
-        Text(
-            text = "Timeline",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
-            timeline.forEach { entry ->
-                TimelineEventItem(entry = entry, noteSpacing = noteSpacing)
-            }
+        timeline.forEach { entry ->
+            TimelineEventItem(entry = entry, noteSpacing = noteSpacing)
         }
     }
 }
@@ -278,5 +281,33 @@ private fun DetailRow(label: String, value: String) {
             style = MaterialTheme.typography.bodyMedium,
             color = AppTheme.colors.infoForeground
         )
+    }
+}
+
+@Composable
+private fun DetailPanel(
+    title: String,
+    verticalSpacing: Dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val colors = AppTheme.colors
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = colors.surface,
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(verticalSpacing)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.infoForeground
+            )
+            content()
+        }
     }
 }
