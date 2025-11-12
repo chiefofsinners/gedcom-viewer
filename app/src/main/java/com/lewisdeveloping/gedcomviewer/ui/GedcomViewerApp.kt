@@ -520,7 +520,7 @@ private fun HomeScreen(
                         disabledContentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(text = "Colour Theme")
+                    Text(text = "Colour theme")
                 }
             }
         }
