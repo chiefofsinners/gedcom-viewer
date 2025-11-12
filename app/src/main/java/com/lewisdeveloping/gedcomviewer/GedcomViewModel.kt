@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lewisdeveloping.gedcomviewer.data.GedcomData
 import com.lewisdeveloping.gedcomviewer.data.GedcomRepository
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,7 +55,8 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
             needsFileSelection = false,
             currentDocumentUri = null,
             currentFileName = GedcomRepository.DEFAULT_FILE,
-            isSampleData = true
+            isSampleData = true,
+            selectedIndividualId = null
         )
         viewModelScope.launch {
             try {
@@ -68,7 +70,9 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     needsFileSelection = false,
                     currentDocumentUri = null,
                     currentFileName = GedcomRepository.DEFAULT_FILE,
-                    isSampleData = true
+                    isSampleData = true,
+                    lastSuccessfulLoadId = UUID.randomUUID().toString(),
+                    selectedIndividualId = null
                 )
             } catch (error: Throwable) {
                 clearSavedSource()
@@ -106,8 +110,14 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.value = current.copy(
             isLoading = false,
             needsFileSelection = true,
-            error = null
+            error = null,
+            selectedIndividualId = null
         )
+    }
+
+    fun selectIndividual(individualId: String?) {
+        val current = _uiState.value
+        _uiState.value = current.copy(selectedIndividualId = individualId)
     }
 
     fun openSavedIndex(): Boolean {
@@ -158,7 +168,8 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
             needsFileSelection = false,
             currentDocumentUri = uri,
             currentFileName = displayName,
-            isSampleData = false
+            isSampleData = false,
+            selectedIndividualId = null
         )
 
         viewModelScope.launch {
@@ -173,7 +184,9 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     needsFileSelection = false,
                     currentDocumentUri = uri,
                     currentFileName = displayName,
-                    isSampleData = false
+                    isSampleData = false,
+                    lastSuccessfulLoadId = UUID.randomUUID().toString(),
+                    selectedIndividualId = null
                 )
             } catch (error: Throwable) {
                 if (previousState.data != null) {
@@ -201,7 +214,8 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 needsFileSelection = true,
-                data = null
+                data = null,
+                selectedIndividualId = null
             )
         }
     }
@@ -280,5 +294,7 @@ data class GedcomUiState(
     val needsFileSelection: Boolean = true,
     val currentDocumentUri: Uri? = null,
     val currentFileName: String? = null,
-    val isSampleData: Boolean = false
+    val isSampleData: Boolean = false,
+    val lastSuccessfulLoadId: String? = null,
+    val selectedIndividualId: String? = null
 )

@@ -14,8 +14,13 @@ class GedcomParser {
         "BIRT", "DEAT", "BAPM", "BAPT", "CHR", "CHRA", "RESI", "OCCU", "BURI", "GRAD", "EDUC", "EVEN"
     )
     private val familyEventTags = setOf("MARR")
+    private val textDecoder = GedcomTextDecoder()
 
-    fun parse(stream: InputStream): GedcomData {
+    fun parse(stream: InputStream, sourceIdentifier: String? = null): GedcomData {
+        val rawData = stream.use { it.readBytes() }
+        val contents = textDecoder.decode(rawData)
+        val scope = IdentifierScope(sourceIdentifier)
+
         val individuals = linkedMapOf<String, IndividualBuilder>()
         val families = linkedMapOf<String, FamilyBuilder>()
         val noteRecords = linkedMapOf<String, NoteRecordBuilder>()
@@ -25,167 +30,168 @@ class GedcomParser {
         var currentNoteRecord: NoteRecordBuilder? = null
         val context = ArrayDeque<Context>()
 
-        stream.bufferedReader(Charsets.UTF_8).useLines { sequence ->
-            sequence.forEach { rawLine ->
-                val line = rawLine.trimEnd().removePrefix("\uFEFF")
-                if (line.isBlank()) return@forEach
+        contents.lineSequence().forEach { rawLine ->
+            val line = rawLine.trimEnd().removePrefix("\uFEFF")
+            if (line.isBlank()) return@forEach
 
-                val match = lineRegex.matchEntire(line) ?: return@forEach
-                val level = match.groupValues[1].toInt()
-                val pointer = match.groupValues[2].takeIf { it.isNotBlank() }
-                val tag = match.groupValues[3]
-                val value = match.groupValues.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() }
+            val match = lineRegex.matchEntire(line) ?: return@forEach
+            val level = match.groupValues[1].toInt()
+            val pointer = match.groupValues[2].takeIf { it.isNotBlank() }
+            val tag = match.groupValues[3]
+            val value = match.groupValues.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() }
 
-                while (context.isNotEmpty() && context.last().level >= level) {
-                    context.removeLast()
+            while (context.isNotEmpty() && context.last().level >= level) {
+                context.removeLast()
+            }
+
+            if (level == 0 && pointer != null) {
+                currentIndividual = null
+                currentFamily = null
+                currentNoteRecord = null
+                when (tag) {
+                    "INDI" -> {
+                        val builder = individuals.getOrPut(pointer.toId()) { IndividualBuilder(pointer.toId()) }
+                        currentIndividual = builder
+                    }
+                    "FAM" -> {
+                        val builder = families.getOrPut(pointer.toId()) { FamilyBuilder(pointer.toId()) }
+                        currentFamily = builder
+                    }
+                    "NOTE" -> {
+                        val builder = noteRecords.getOrPut(pointer.toId()) { NoteRecordBuilder(pointer.toId()) }
+                        builder.setInitial(value)
+                        currentNoteRecord = builder
+                    }
                 }
+                context.clear()
+                context.add(Context(level, tag))
+                return@forEach
+            }
 
-                if (level == 0 && pointer != null) {
-                    currentIndividual = null
-                    currentFamily = null
-                    currentNoteRecord = null
+            val parentTag = context.lastOrNull()?.tag
+            val pointerId = parsePointer(value)
+            val currentEventBuilder = context.lastOrNull { it.eventBuilder != null }?.eventBuilder
+
+            var handled = false
+            var addedContext = false
+
+            currentNoteRecord?.let { note ->
+                if (context.lastOrNull()?.tag == "NOTE") {
                     when (tag) {
-                        "INDI" -> {
-                            val builder = individuals.getOrPut(pointer.toId()) { IndividualBuilder(pointer.toId()) }
-                            currentIndividual = builder
-                        }
-                        "FAM" -> {
-                            val builder = families.getOrPut(pointer.toId()) { FamilyBuilder(pointer.toId()) }
-                            currentFamily = builder
-                        }
-                        "NOTE" -> {
-                            val builder = noteRecords.getOrPut(pointer.toId()) { NoteRecordBuilder(pointer.toId()) }
-                            builder.setInitial(value)
-                            currentNoteRecord = builder
-                        }
+                        "CONC" -> note.appendConc(value)
+                        "CONT" -> note.appendCont(value)
                     }
-                    context.clear()
-                    context.add(Context(level, tag))
-                    return@forEach
+                    handled = true
                 }
+            }
 
-                val parentTag = context.lastOrNull()?.tag
-                val pointerId = parsePointer(value)
-                val currentEventBuilder = context.lastOrNull { it.eventBuilder != null }?.eventBuilder
+            if (!handled && currentIndividual != null && tag in individualEventTags) {
+                val eventBuilder = currentIndividual!!.beginEvent(tag, eventLabelFor(tag), value)
+                context.add(Context(level, tag, eventBuilder))
+                addedContext = true
+                handled = true
+            }
 
-                var handled = false
-                var addedContext = false
-
-                currentNoteRecord?.let { note ->
-                    if (context.lastOrNull()?.tag == "NOTE") {
-                        when (tag) {
-                            "CONC" -> note.appendConc(value)
-                            "CONT" -> note.appendCont(value)
-                        }
-                        handled = true
-                    }
-                }
-
-                if (!handled && currentIndividual != null && tag in individualEventTags) {
-                    val eventBuilder = currentIndividual!!.beginEvent(tag, eventLabelFor(tag), value)
+            if (!handled && currentFamily != null && tag in familyEventTags) {
+                val eventBuilder = currentFamily!!.beginEvent(tag, value)
+                if (eventBuilder != null) {
                     context.add(Context(level, tag, eventBuilder))
                     addedContext = true
                     handled = true
                 }
+            }
 
-                if (!handled && currentFamily != null && tag in familyEventTags) {
-                    val eventBuilder = currentFamily!!.beginEvent(tag, value)
-                    if (eventBuilder != null) {
-                        context.add(Context(level, tag, eventBuilder))
-                        addedContext = true
+            if (!handled) {
+                currentIndividual?.let { individual ->
+                    var consumed = false
+                    currentEventBuilder?.let { builder ->
+                        consumed = builder.handle(tag, value, pointerId, parentTag)
+                    }
+                    if (consumed) {
                         handled = true
-                    }
-                }
-
-                if (!handled) {
-                    currentIndividual?.let { individual ->
-                        var consumed = false
-                        currentEventBuilder?.let { builder ->
-                            consumed = builder.handle(tag, value, pointerId, parentTag)
-                        }
-                        if (consumed) {
-                            handled = true
-                        } else {
-                            when {
-                                tag == "NAME" -> {
-                                    individual.setName(value.orEmpty())
-                                    handled = true
-                                }
-                                tag == "TITL" -> {
-                                    individual.setTitle(value)
-                                    handled = true
-                                }
-                                tag == "SEX" -> {
-                                    individual.setGender(value)
-                                    handled = true
-                                }
-                                tag == "FAMC" -> {
-                                    pointerId?.let(individual.familiesAsChild::add)
-                                    handled = true
-                                }
-                                tag == "FAMS" -> {
-                                    pointerId?.let(individual.familiesAsSpouse::add)
-                                    handled = true
-                                }
-                                tag == "OBJE" && individual.primaryObjectId == null -> {
-                                    individual.primaryObjectId = pointerId
-                                    handled = true
-                                }
-                                tag == "NOTE" -> {
-                                    individual.addNote(value, pointerId)
-                                    handled = true
-                                }
-                                parentTag == "TITL" && (tag == "CONC" || tag == "CONT") -> {
-                                    individual.appendTitleContinuation(tag, value)
-                                    handled = true
-                                }
-                                parentTag == "NOTE" && (tag == "CONC" || tag == "CONT") -> {
-                                    individual.appendNoteContinuation(tag, value)
-                                    handled = true
-                                }
+                    } else {
+                        when {
+                            tag == "NAME" -> {
+                                individual.setName(value.orEmpty())
+                                handled = true
+                            }
+                            tag == "TITL" -> {
+                                individual.setTitle(value)
+                                handled = true
+                            }
+                            tag == "SEX" -> {
+                                individual.setGender(value)
+                                handled = true
+                            }
+                            tag == "FAMC" -> {
+                                pointerId?.let(individual.familiesAsChild::add)
+                                handled = true
+                            }
+                            tag == "FAMS" -> {
+                                pointerId?.let(individual.familiesAsSpouse::add)
+                                handled = true
+                            }
+                            tag == "OBJE" && individual.primaryObjectId == null -> {
+                                individual.primaryObjectId = pointerId
+                                handled = true
+                            }
+                            tag == "NOTE" -> {
+                                individual.addNote(value, pointerId)
+                                handled = true
+                            }
+                            parentTag == "TITL" && (tag == "CONC" || tag == "CONT") -> {
+                                individual.appendTitleContinuation(tag, value)
+                                handled = true
+                            }
+                            parentTag == "NOTE" && (tag == "CONC" || tag == "CONT") -> {
+                                individual.appendNoteContinuation(tag, value)
+                                handled = true
                             }
                         }
                     }
                 }
+            }
 
-                if (!handled) {
-                    currentFamily?.let { family ->
-                        var consumed = false
-                        currentEventBuilder?.let { builder ->
-                            consumed = builder.handle(tag, value, pointerId, parentTag)
-                        }
-                        if (consumed) {
-                            handled = true
-                        } else {
-                            when (tag) {
-                                "HUSB" -> {
-                                    family.husbandId = pointerId
-                                    handled = true
-                                }
-                                "WIFE" -> {
-                                    family.wifeId = pointerId
-                                    handled = true
-                                }
-                                "CHIL" -> {
-                                    pointerId?.let(family.children::add)
-                                    handled = true
-                                }
+            if (!handled) {
+                currentFamily?.let { family ->
+                    var consumed = false
+                    currentEventBuilder?.let { builder ->
+                        consumed = builder.handle(tag, value, pointerId, parentTag)
+                    }
+                    if (consumed) {
+                        handled = true
+                    } else {
+                        when (tag) {
+                            "HUSB" -> {
+                                family.husbandId = pointerId
+                                handled = true
+                            }
+                            "WIFE" -> {
+                                family.wifeId = pointerId
+                                handled = true
+                            }
+                            "CHIL" -> {
+                                pointerId?.let(family.children::add)
+                                handled = true
                             }
                         }
                     }
                 }
+            }
 
-                if (!addedContext && (currentIndividual != null || currentFamily != null || currentNoteRecord != null)) {
-                    context.add(Context(level, tag))
-                }
+            if (!addedContext && (currentIndividual != null || currentFamily != null || currentNoteRecord != null)) {
+                context.add(Context(level, tag))
             }
         }
 
         val resolvedNotes = noteRecords.mapValues { it.value.build() }
+        val resolvedIndividuals = individuals.values.map { it.build(resolvedNotes, scope) }
+        val resolvedFamilies = families.values.map { it.build(resolvedNotes, scope) }
 
         return GedcomData(
-            individuals = individuals.mapValues { it.value.build(resolvedNotes) },
-            families = families.mapValues { it.value.build(resolvedNotes) }
+            sourceId = scope.sourceId,
+            individuals = resolvedIndividuals.associateBy { it.id },
+            families = resolvedFamilies.associateBy { it.id }
         )
     }
 
@@ -223,7 +229,7 @@ class GedcomParser {
         }
         .ifBlank { tag }
 
-    private class IndividualBuilder(val id: String) {
+    private class IndividualBuilder(val gedcomId: String) {
         private var fullName: String = ""
         private var givenName: String? = null
         private var surname: String? = null
@@ -303,7 +309,10 @@ class GedcomParser {
             inline.append(value, newline = tag == "CONT")
         }
 
-        fun build(noteRecords: Map<String, String>): Individual {
+        fun build(
+            noteRecords: Map<String, String>,
+            scope: IdentifierScope
+        ): Individual {
             val birth = birthEvent.build(noteRecords)
             val death = deathEvent.build(noteRecords)
             val timeline = timelineEntries.mapNotNull { entry ->
@@ -315,8 +324,15 @@ class GedcomParser {
             val resolvedTitle = titleBuilder?.toString()?.trim()?.takeIf { it.isNotEmpty() }
                 ?: title?.trim()?.takeIf { it.isNotEmpty() }
 
+            val scopedId = scope.scoped(gedcomId)
+                ?: error("Unable to scope individual id: $gedcomId")
+            val scopedFamiliesAsSpouse = familiesAsSpouse.mapNotNull(scope::scoped)
+            val scopedFamiliesAsChild = familiesAsChild.mapNotNull(scope::scoped)
+
             return Individual(
-                id = id,
+                id = scopedId,
+                gedcomId = gedcomId,
+                sourceId = scope.sourceId,
                 fullName = resolvedFullName,
                 givenName = givenName,
                 surname = surname,
@@ -324,8 +340,8 @@ class GedcomParser {
                 gender = gender,
                 birth = birth,
                 death = death,
-                familiesAsSpouse = familiesAsSpouse.toList(),
-                familiesAsChild = familiesAsChild.toList(),
+                familiesAsSpouse = scopedFamiliesAsSpouse,
+                familiesAsChild = scopedFamiliesAsChild,
                 timeline = timeline,
                 notes = notes.mapNotNull { it.resolve(noteRecords) },
                 primaryObjectId = primaryObjectId
@@ -339,7 +355,7 @@ class GedcomParser {
         )
     }
 
-    private class FamilyBuilder(val id: String) {
+    private class FamilyBuilder(val gedcomId: String) {
         var husbandId: String? = null
         var wifeId: String? = null
         val children: MutableList<String> = mutableListOf()
@@ -353,11 +369,17 @@ class GedcomParser {
             else -> null
         }
 
-        fun build(noteRecords: Map<String, String>): Family = Family(
-            id = id,
-            husbandId = husbandId,
-            wifeId = wifeId,
-            childrenIds = children.toList(),
+        fun build(
+            noteRecords: Map<String, String>,
+            scope: IdentifierScope
+        ): Family = Family(
+            id = scope.scoped(gedcomId)
+                ?: error("Unable to scope family id: $gedcomId"),
+            gedcomId = gedcomId,
+            sourceId = scope.sourceId,
+            husbandId = scope.scoped(husbandId),
+            wifeId = scope.scoped(wifeId),
+            childrenIds = children.mapNotNull(scope::scoped),
             marriage = marriageEvent.build(noteRecords)
         )
     }

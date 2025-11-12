@@ -4,48 +4,70 @@ import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lewisdeveloping.gedcomviewer.GedcomViewModel
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanel
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanelStyle
 import com.lewisdeveloping.gedcomviewer.ui.screens.FamilyScreen
 import com.lewisdeveloping.gedcomviewer.ui.screens.IndividualsScreen
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppThemeOption
 import com.lewisdeveloping.gedcomviewer.ui.theme.GedcomViewerTheme
+import com.lewisdeveloping.gedcomviewer.ui.theme.ThemePreferences
 
 @Composable
 fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val data = uiState.data
-    val errorMessage = uiState.error
-
-    var familyStack by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    val themePreferences = remember { ThemePreferences(context.applicationContext) }
+    val onSelectTheme = remember(themePreferences) {
+        { option: AppThemeOption -> themePreferences.select(option) }
+    }
+    val currentTheme by themePreferences.theme.collectAsState()
+    var rootSelection by rememberSaveable { mutableStateOf<String?>(null) }
+    var navigationPath by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
+    var suppressSelectionReset by remember { mutableStateOf(false) }
     var currentTab by rememberSaveable { mutableStateOf(FileActionBarSelection.HOME) }
     val showFullScreenLoading = uiState.isLoading && !uiState.needsFileSelection
+    val data = uiState.data
+    val errorMessage = uiState.error
+    val selectedIndividualId = uiState.selectedIndividualId
+    val activeIndividualId = navigationPath.lastOrNull() ?: rootSelection
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -64,8 +86,8 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         openDocumentLauncher.launch(arrayOf("application/octet-stream", "text/plain", "application/x-gedcom"))
     }
 
-    LaunchedEffect(uiState.needsFileSelection, familyStack) {
-        val familyAvailable = familyStack.isNotEmpty()
+    LaunchedEffect(uiState.needsFileSelection, activeIndividualId) {
+        val familyAvailable = activeIndividualId != null
         val desiredTab = when {
             uiState.needsFileSelection -> FileActionBarSelection.HOME
             currentTab == FileActionBarSelection.HOME -> if (familyAvailable) FileActionBarSelection.FAMILY else FileActionBarSelection.INDEX
@@ -83,34 +105,79 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
+    LaunchedEffect(selectedIndividualId) {
+        if (suppressSelectionReset) {
+            suppressSelectionReset = false
+        } else {
+            rootSelection = selectedIndividualId
+            navigationPath = emptyList()
+        }
+    }
+
     LaunchedEffect(data) {
         if (data == null) {
-            familyStack = emptyList()
+            navigationPath = emptyList()
+            rootSelection = null
+            viewModel.selectIndividual(null)
         } else {
-            val filtered = familyStack.filter { id -> data.individuals.containsKey(id) }
-            if (filtered.size != familyStack.size) {
-                familyStack = filtered
+            val rootValid = rootSelection?.let { data.individuals.containsKey(it) } ?: true
+            if (!rootValid) {
+                rootSelection = null
+                navigationPath = emptyList()
+                viewModel.selectIndividual(null)
+            } else {
+                val filtered = navigationPath.filter { id -> data.individuals.containsKey(id) }
+                if (filtered.size != navigationPath.size) {
+                    navigationPath = filtered
+                }
             }
         }
     }
 
     val popFamily: () -> Unit = {
-        if (familyStack.isNotEmpty()) {
-            familyStack = familyStack.dropLast(1)
-        }
-        if (familyStack.isEmpty()) {
+        if (navigationPath.isNotEmpty()) {
+            navigationPath = navigationPath.dropLast(1)
+            val target: String? = navigationPath.lastOrNull() ?: rootSelection
+            suppressSelectionReset = true
+            viewModel.selectIndividual(target)
+            if (navigationPath.isEmpty()) {
+                currentTab = FileActionBarSelection.INDEX
+            }
+        } else {
             currentTab = FileActionBarSelection.INDEX
         }
     }
 
-    BackHandler(enabled = !showFullScreenLoading && currentTab == FileActionBarSelection.FAMILY && familyStack.isNotEmpty()) {
+    BackHandler(enabled = !showFullScreenLoading && currentTab == FileActionBarSelection.FAMILY && navigationPath.isNotEmpty()) {
         popFamily()
     }
 
-    val pushFamily: (String) -> Unit = { individualId ->
-        if (familyStack.lastOrNull() != individualId) {
-            familyStack = familyStack + individualId
+    val pushFamily: (String) -> Unit = pushFamily@{ individualId ->
+        if (rootSelection == null) {
+            rootSelection = individualId
+            navigationPath = emptyList()
+        } else {
+            if (navigationPath.lastOrNull() == individualId) {
+                currentTab = FileActionBarSelection.FAMILY
+                return@pushFamily
+            }
+            val existingIndex = navigationPath.indexOf(individualId)
+            navigationPath = if (existingIndex >= 0) {
+                navigationPath.take(existingIndex + 1)
+            } else {
+                navigationPath + individualId
+            }
         }
+        suppressSelectionReset = true
+        viewModel.selectIndividual(individualId)
+        currentTab = FileActionBarSelection.FAMILY
+    }
+
+    val handleIndexSelection: (String) -> Unit = { individualId ->
+        navigationPath = emptyList()
+        rootSelection = individualId
+        suppressSelectionReset = false
+        viewModel.selectIndividual(individualId)
         currentTab = FileActionBarSelection.FAMILY
     }
 
@@ -127,18 +194,17 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     }
 
     val navigateFamily: () -> Unit = navigateFamily@{
-        if (familyStack.isEmpty()) return@navigateFamily
+        if (rootSelection == null) return@navigateFamily
         val restored = viewModel.openSavedIndex()
         if (restored) {
             currentTab = FileActionBarSelection.FAMILY
         }
     }
 
-    val selectedIndividualId = familyStack.lastOrNull()
-    val familyEnabled = selectedIndividualId != null
+    val familyEnabled = activeIndividualId != null
     val hasData = data != null
 
-    GedcomViewerTheme {
+    GedcomViewerTheme(theme = currentTheme) {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
                 showFullScreenLoading -> LoadingScreen()
@@ -150,12 +216,14 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         onLoadSample = viewModel::loadSample,
                         onNavigateIndex = navigateIndex,
                         onNavigateFamily = navigateFamily,
-                        familyEnabled = familyEnabled
+                        familyEnabled = familyEnabled,
+                        currentTheme = currentTheme,
+                        onThemeSelected = onSelectTheme
                     )
                 }
-                currentTab == FileActionBarSelection.FAMILY && selectedIndividualId != null && data != null -> {
+                currentTab == FileActionBarSelection.FAMILY && activeIndividualId != null && data != null -> {
                     FamilyScreen(
-                        individualId = selectedIndividualId,
+                        individualId = activeIndividualId,
                         data = data,
                         onNavigateBack = popFamily,
                         onIndividualSelected = pushFamily,
@@ -163,6 +231,15 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         onNavigateIndex = navigateIndex,
                         onNavigateFamily = navigateFamily,
                         familyEnabled = familyEnabled
+                    )
+                }
+                currentTab == FileActionBarSelection.FAMILY && activeIndividualId == null -> {
+                    InfoPanel(
+                        text = "Select an individual from the index to view family connections.",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        style = InfoPanelStyle.Info
                     )
                 }
                 else -> {
@@ -182,11 +259,12 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         IndividualsScreen(
                             individuals = data.individualsSortedByName,
                             currentFileName = uiState.currentFileName,
+                            lastSuccessfulLoadId = uiState.lastSuccessfulLoadId,
                             onNavigateHome = navigateHome,
                             onNavigateIndex = navigateIndex,
                             onNavigateFamily = navigateFamily,
                             familyEnabled = familyEnabled,
-                            onIndividualSelected = pushFamily
+                            onIndividualSelected = handleIndexSelection
                         )
                     }
                 }
@@ -207,10 +285,16 @@ private fun HomeScreen(
     onLoadSample: () -> Unit,
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
-    familyEnabled: Boolean
+    familyEnabled: Boolean,
+    currentTheme: AppThemeOption,
+    onThemeSelected: (AppThemeOption) -> Unit,
+    availableThemes: List<AppThemeOption> = AppThemeOption.values().toList()
 ) {
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    val colors = AppTheme.colors
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = colors.background,
         bottomBar = {
             FileActionBar(
                 selected = FileActionBarSelection.HOME,
@@ -244,10 +328,10 @@ private fun HomeScreen(
                     textAlign = TextAlign.Center
                 )
                 errorMessage?.let {
-                    Text(
+                    InfoPanel(
                         text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        style = InfoPanelStyle.Error,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Button(
@@ -270,8 +354,29 @@ private fun HomeScreen(
                 ) {
                     Text(text = "Load sample data")
                 }
+                OutlinedButton(
+                    onClick = { showThemeDialog = true },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        disabledContentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(text = "Theme & appearance")
+                }
             }
         }
+    }
+
+    if (showThemeDialog) {
+        ThemePickerDialog(
+            currentTheme = currentTheme,
+            availableThemes = availableThemes,
+            onThemeSelected = {
+                onThemeSelected(it)
+                showThemeDialog = false
+            },
+            onDismissRequest = { showThemeDialog = false }
+        )
     }
 }
 
@@ -297,4 +402,68 @@ private fun LoadingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
     }
+}
+
+@Composable
+private fun ThemePickerDialog(
+    currentTheme: AppThemeOption,
+    availableThemes: List<AppThemeOption>,
+    onThemeSelected: (AppThemeOption) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text(text = "Theme & appearance")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                availableThemes.forEach { option ->
+                    val selected = option == currentTheme
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onThemeSelected(option) }
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected,
+                            onClick = { onThemeSelected(option) }
+                        )
+                        Column(
+                            modifier = Modifier.padding(start = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = themeDisplayName(option),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = themeDescription(option),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = "Close")
+            }
+        }
+    )
+}
+
+private fun themeDisplayName(option: AppThemeOption): String = when (option) {
+    AppThemeOption.SILVER -> "Silver"
+    AppThemeOption.EARTH -> "Earth"
+}
+
+private fun themeDescription(option: AppThemeOption): String = when (option) {
+    AppThemeOption.SILVER -> "Cool metallic neutrals inspired by modern UI chrome."
+    AppThemeOption.EARTH -> "Warm organic palette drawn from archival vellum tones."
 }

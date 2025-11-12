@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.TimelineEntry
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,7 @@ fun IndividualDetailsDialog(
     onDismissRequest: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
+    val themeColors = AppTheme.colors
     val maxDialogHeight = configuration.screenHeightDp.dp * 0.9f
     val scrollState = rememberScrollState()
     val isPhonePortrait = configuration.smallestScreenWidthDp < 600 &&
@@ -81,7 +83,7 @@ fun IndividualDetailsDialog(
                     .heightIn(max = maxDialogHeight),
                 shape = MaterialTheme.shapes.extraLarge,
                 tonalElevation = 6.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = themeColors.surface
             ) {
                 Column(
                     modifier = Modifier
@@ -99,11 +101,11 @@ fun IndividualDetailsDialog(
                         verticalArrangement = Arrangement.spacedBy(sectionSpacing)
                     ) {
                         if (!hasContent) {
-                            Text(
-                                text = "No additional information available.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                                Text(
+                                    text = "No additional information available.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = themeColors.supportingText
+                                )
                         } else {
                             if (detailItems.isNotEmpty()) {
                                 Column(verticalArrangement = Arrangement.spacedBy(detailSpacing)) {
@@ -146,7 +148,7 @@ private fun HeaderSection() {
         Icon(
             imageVector = Icons.Outlined.Info,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
+            tint = AppTheme.colors.accent
         )
         Text(
             text = "Individual details",
@@ -205,7 +207,7 @@ private fun TimelineEventItem(
             text = headline,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = AppTheme.colors.infoForeground
         )
 
         val keyDetails = mutableListOf<Pair<String, String>>()
@@ -228,13 +230,13 @@ private fun TimelineEventItem(
                 Text(
                     text = "Notes",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AppTheme.colors.supportingText
                 )
                 event.notes.forEach { note ->
                     Text(
                         text = "• $note",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = AppTheme.colors.infoForeground
                     )
                 }
             }
@@ -257,7 +259,7 @@ private fun AdditionalNotesSection(
             Text(
                 text = "• $note",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = AppTheme.colors.infoForeground
             )
         }
     }
@@ -269,12 +271,12 @@ private fun DetailRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = AppTheme.colors.supportingText
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = AppTheme.colors.infoForeground
         )
     }
 }

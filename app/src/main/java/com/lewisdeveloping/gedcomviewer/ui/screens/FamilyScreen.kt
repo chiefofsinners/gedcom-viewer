@@ -46,7 +46,10 @@ import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.IndividualDetailsDialog
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanel
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanelStyle
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonCard
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +64,7 @@ fun FamilyScreen(
     familyEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val colors = AppTheme.colors
     val focus = data.individuals[individualId]
     var showDetails by remember(focus?.id) { mutableStateOf(false) }
     val swipeThreshold = with(LocalDensity.current) { 80.dp.toPx() }
@@ -86,7 +90,7 @@ fun FamilyScreen(
 
     Scaffold(
         modifier = modifier.then(swipeModifier),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = colors.background,
         topBar = {
             TopAppBar(
                 title = { Text(text = focus?.displayName ?: "Family") },
@@ -103,11 +107,11 @@ fun FamilyScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = colors.secondaryBackground,
+                    scrolledContainerColor = colors.secondaryBackground,
+                    titleContentColor = colors.supportingText,
+                    navigationIconContentColor = colors.supportingText,
+                    actionIconContentColor = colors.supportingText
                 ),
                 windowInsets = TopAppBarDefaults.windowInsets
             )
@@ -130,7 +134,11 @@ fun FamilyScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Individual not found", style = MaterialTheme.typography.bodyLarge)
+                InfoPanel(
+                    text = "Individual not found",
+                    style = InfoPanelStyle.Error,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
         } else {
             val partnerFamily = findFamily(focus.familiesAsSpouse, data)
@@ -205,25 +213,33 @@ private fun ParentsSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        ResponsivePersonCardRow(
-            isCompact = isCompact,
-            first = { modifier ->
-                PersonCard(
-                    individual = focusParents?.husbandId?.let { data.individuals[it] },
-                    label = "Father",
-                    modifier = modifier,
-                    onClick = onIndividualSelected
-                )
-            },
-            second = { modifier ->
-                PersonCard(
-                    individual = focusParents?.wifeId?.let { data.individuals[it] },
-                    label = "Mother",
-                    modifier = modifier,
-                    onClick = onIndividualSelected
-                )
-            }
-        )
+        if (focusParents == null) {
+            InfoPanel(
+                text = "No recorded parents.",
+                style = InfoPanelStyle.Info,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            ResponsivePersonCardRow(
+                isCompact = isCompact,
+                first = { modifier ->
+                    PersonCard(
+                        individual = focusParents.husbandId?.let { data.individuals[it] },
+                        label = "Father",
+                        modifier = modifier,
+                        onClick = onIndividualSelected
+                    )
+                },
+                second = { modifier ->
+                    PersonCard(
+                        individual = focusParents.wifeId?.let { data.individuals[it] },
+                        label = "Mother",
+                        modifier = modifier,
+                        onClick = onIndividualSelected
+                    )
+                }
+            )
+        }
     }
 }
 
@@ -235,6 +251,7 @@ private fun FamilyCoreSection(
     onIndividualSelected: (String) -> Unit,
     isCompact: Boolean
 ) {
+    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Family",
@@ -263,15 +280,15 @@ private fun FamilyCoreSection(
         marriage?.description()?.let { description ->
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = colors.surface,
+                    contentColor = colors.supportingText
                 )
             ) {
                 Text(
                     text = "Married: $description",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = colors.supportingText
                 )
             }
         }
@@ -309,6 +326,7 @@ private fun ChildrenSection(
     onIndividualSelected: (String) -> Unit,
     stackVertically: Boolean
 ) {
+    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val header = if (children.isEmpty()) "Children" else "Children (${children.size})"
         Text(
@@ -317,43 +335,11 @@ private fun ChildrenSection(
             fontWeight = FontWeight.SemiBold
         )
         if (children.isEmpty()) {
-            if (stackVertically) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Text(
-                        text = "No recorded children",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Text(
-                            text = "No recorded children",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
+            InfoPanel(
+                text = "No recorded children",
+                style = InfoPanelStyle.Info,
+                modifier = Modifier.fillMaxWidth()
+            )
         } else {
             if (stackVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

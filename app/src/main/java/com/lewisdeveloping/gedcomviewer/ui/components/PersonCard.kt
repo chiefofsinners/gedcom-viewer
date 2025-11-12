@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lewisdeveloping.gedcomviewer.model.Individual
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
 
 @Composable
 fun PersonCard(
@@ -27,13 +28,14 @@ fun PersonCard(
     } else {
         modifier
     }
+    val colors = AppTheme.colors
 
     Card(
         modifier = clickableModifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            containerColor = colors.surface,
+            contentColor = colors.infoForeground
         )
     ) {
         Column(
@@ -52,21 +54,21 @@ fun PersonCard(
                     text = individual?.displayName ?: "Unknown",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = colors.infoForeground,
                     maxLines = 2
                 )
                 individual?.birth?.description()?.let { description ->
                     Text(
                         text = "Born: $description",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = colors.supportingText
                     )
                 }
                 individual?.death?.description()?.let { description ->
                     Text(
                         text = "Died: $description",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = colors.supportingText
                     )
                 }
             }
@@ -102,7 +104,7 @@ fun PersonRow(
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AppTheme.colors.supportingText
             )
         }
     }

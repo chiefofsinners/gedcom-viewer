@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +46,11 @@ import com.lewisdeveloping.gedcomviewer.model.Individual
 import com.lewisdeveloping.gedcomviewer.model.LifeEvent
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBar
 import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanel
+import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanelStyle
 import com.lewisdeveloping.gedcomviewer.ui.components.PersonRow
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
+import com.lewisdeveloping.gedcomviewer.ui.theme.AppThemeOption
 import com.lewisdeveloping.gedcomviewer.ui.theme.GedcomViewerTheme
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -55,12 +60,14 @@ import java.util.Locale
 fun IndividualsScreen(
     individuals: List<Individual>,
     currentFileName: String?,
+    lastSuccessfulLoadId: String?,
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
     familyEnabled: Boolean,
     onIndividualSelected: (String) -> Unit,
 ) {
+    val colors = AppTheme.colors
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -98,6 +105,15 @@ fun IndividualsScreen(
         buildSections(filteredIndividuals)
     }
 
+    LaunchedEffect(lastSuccessfulLoadId) {
+        if (lastSuccessfulLoadId != null) {
+            searchQuery = ""
+            coroutineScope.launch {
+                listState.scrollToItem(0)
+            }
+        }
+    }
+
     val letterPositions = remember(sections) {
         val mapping = mutableMapOf<Char, Int>()
         var index = 0
@@ -109,7 +125,7 @@ fun IndividualsScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = colors.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -118,11 +134,11 @@ fun IndividualsScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = colors.secondaryBackground,
+                    scrolledContainerColor = colors.secondaryBackground,
+                    titleContentColor = colors.supportingText,
+                    navigationIconContentColor = colors.supportingText,
+                    actionIconContentColor = colors.supportingText
                 ),
                 windowInsets = TopAppBarDefaults.windowInsets
             )
@@ -163,12 +179,11 @@ fun IndividualsScreen(
                 availableSections.map { it.title }.distinct().sorted()
             }
             if (sections.isEmpty()) {
-                Text(
+                InfoPanel(
                     text = "No individuals found",
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 24.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = InfoPanelStyle.Info
                 )
             } else {
                 Row(
@@ -186,7 +201,7 @@ fun IndividualsScreen(
                         sections.forEach { section ->
                             item(key = "header-${section.title}") {
                                 Surface(
-                                    color = MaterialTheme.colorScheme.background,
+                                    color = colors.background,
                                     tonalElevation = 2.dp
                                 ) {
                                     Text(
@@ -239,7 +254,7 @@ fun IndividualsScreen(
                                     HorizontalDivider(
                                         modifier = Modifier.padding(horizontal = 12.dp),
                                         thickness = 0.5.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant
+                                        color = colors.border.copy(alpha = 0.4f)
                                     )
                                 }
                             }
@@ -256,7 +271,9 @@ fun IndividualsScreen(
 private fun IndividualsScreenPreview() {
     val individuals = listOf(
         Individual(
-            id = "I1",
+            id = "preview::I1",
+            gedcomId = "I1",
+            sourceId = "preview",
             fullName = "Anthony Edward Munro",
             givenName = "Anthony",
             surname = "Munro",
@@ -264,7 +281,9 @@ private fun IndividualsScreenPreview() {
             birth = LifeEvent(date = "12 JAN 1922", place = "Cheltenham, Gloucestershire, England")
         ),
         Individual(
-            id = "I2",
+            id = "preview::I2",
+            gedcomId = "I2",
+            sourceId = "preview",
             fullName = "Julia Amanda Fish",
             givenName = "Julia",
             surname = "Fish",
@@ -272,7 +291,9 @@ private fun IndividualsScreenPreview() {
             birth = LifeEvent(date = "12 JAN 1925", place = "Greenwich, London, England")
         ),
         Individual(
-            id = "I3",
+            id = "preview::I3",
+            gedcomId = "I3",
+            sourceId = "preview",
             fullName = "Nigel Raymond Munro",
             givenName = "Nigel",
             surname = "Munro",
@@ -280,10 +301,11 @@ private fun IndividualsScreenPreview() {
         )
     )
 
-    GedcomViewerTheme {
+    GedcomViewerTheme(theme = AppThemeOption.SILVER) {
         IndividualsScreen(
             individuals = individuals,
             currentFileName = "Sample-GEDCOM.ged",
+            lastSuccessfulLoadId = "preview",
             onNavigateHome = {},
             onNavigateIndex = {},
             onNavigateFamily = {},
