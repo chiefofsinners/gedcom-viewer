@@ -497,7 +497,7 @@ private fun HomeScreen(
                     onClick = onBrowseFiles,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        contentColor = MaterialTheme.colorScheme.background,
                         disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                         disabledContentColor = MaterialTheme.colorScheme.onPrimary
                     )
@@ -520,7 +520,7 @@ private fun HomeScreen(
                         disabledContentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(text = "Theme & appearance")
+                    Text(text = "Colour Theme")
                 }
             }
         }
@@ -623,6 +623,6 @@ private fun themeDisplayName(option: AppThemeOption): String = when (option) {
 }
 
 private fun themeDescription(option: AppThemeOption): String = when (option) {
-    AppThemeOption.SILVER -> "Cool metallic neutrals inspired by modern UI chrome."
-    AppThemeOption.EARTH -> "Warm organic palette drawn from archival vellum tones."
+    AppThemeOption.SILVER -> "Cool metallic neutral."
+    AppThemeOption.EARTH -> "Warm organic palette."
 }
