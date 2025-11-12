@@ -101,7 +101,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
     val openFilePicker: () -> Unit = {
-        openDocumentLauncher.launch(arrayOf("application/octet-stream", "text/plain", "application/x-gedcom"))
+        openDocumentLauncher.launch(arrayOf("*/*"))
     }
 
     LaunchedEffect(uiState.needsFileSelection, activeIndividualId) {
