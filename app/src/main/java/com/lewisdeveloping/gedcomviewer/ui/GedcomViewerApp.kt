@@ -286,7 +286,7 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                 else -> {
                     if (data == null) {
                         when {
-                            uiState.isLoading -> Box(modifier = Modifier.fillMaxSize())
+                            uiState.isLoading -> LoadingScreen()
                             uiState.needsFileSelection -> {
                                 Text(
                                     text = "No GEDCOM data loaded",
@@ -600,8 +600,15 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun LoadingScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+    val colors = AppTheme.colors
+    val materialColors = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.background),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = materialColors.primary)
     }
 }
 
@@ -621,7 +628,7 @@ private fun ThemePickerDialog(
         titleContentColor = materialColors.onSurface,
         textContentColor = materialColors.onSurface,
         title = {
-            Text(text = "Select Theme")
+            Text(text = "Colour Theme")
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
