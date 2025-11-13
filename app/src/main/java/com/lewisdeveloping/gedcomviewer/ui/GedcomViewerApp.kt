@@ -6,6 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -609,8 +612,14 @@ private fun ThemePickerDialog(
     onThemeSelected: (AppThemeOption) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val colors = AppTheme.colors
+    val materialColors = MaterialTheme.colorScheme
+    val optionShape = RoundedCornerShape(12.dp)
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = materialColors.surface,
+        titleContentColor = materialColors.onSurface,
+        textContentColor = materialColors.onSurface,
         title = {
             Text(text = "Theme & appearance")
         },
@@ -618,17 +627,33 @@ private fun ThemePickerDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 availableThemes.forEach { option ->
                     val selected = option == currentTheme
+                    val rowBackground = if (selected) {
+                        materialColors.secondaryContainer
+                    } else {
+                        materialColors.surfaceVariant.copy(alpha = 0.6f)
+                    }
+                    val borderColor = if (selected) {
+                        materialColors.primary
+                    } else {
+                        colors.border.copy(alpha = 0.5f)
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(optionShape)
+                            .background(rowBackground)
+                            .border(width = 1.dp, color = borderColor, shape = optionShape)
                             .clickable { onThemeSelected(option) }
-                            .padding(horizontal = 4.dp, vertical = 8.dp),
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selected,
-                            onClick = { onThemeSelected(option) }
+                            onClick = { onThemeSelected(option) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = materialColors.primary,
+                                unselectedColor = materialColors.onSurfaceVariant
+                            )
                         )
                         Column(
                             modifier = Modifier.padding(start = 8.dp),
