@@ -23,9 +23,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -182,6 +184,21 @@ fun IndividualsScreen(
                         contentDescription = "Search"
                     )
                 },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            coroutineScope.launch {
+                                listState.scrollToItem(0)
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Cancel,
+                                contentDescription = "Clear search"
+                            )
+                        }
+                    }
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(20.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -192,6 +209,8 @@ fun IndividualsScreen(
                     unfocusedBorderColor = colors.supportingText.copy(alpha = 0.4f),
                     focusedLeadingIconColor = colors.supportingText,
                     unfocusedLeadingIconColor = colors.supportingText,
+                    focusedTrailingIconColor = colors.supportingText,
+                    unfocusedTrailingIconColor = colors.supportingText,
                     cursorColor = colors.supportingText
                 )
             )

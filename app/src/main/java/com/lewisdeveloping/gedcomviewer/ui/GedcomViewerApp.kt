@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -70,7 +69,6 @@ import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
 import com.lewisdeveloping.gedcomviewer.ui.theme.AppThemeOption
 import com.lewisdeveloping.gedcomviewer.ui.theme.GedcomViewerTheme
 import com.lewisdeveloping.gedcomviewer.ui.theme.ThemePreferences
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @Composable
