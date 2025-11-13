@@ -621,7 +621,7 @@ private fun ThemePickerDialog(
         titleContentColor = materialColors.onSurface,
         textContentColor = materialColors.onSurface,
         title = {
-            Text(text = "Theme & appearance")
+            Text(text = "Select Theme")
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
