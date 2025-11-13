@@ -193,7 +193,7 @@ private fun FamilyCoreSection(
             second = { modifier ->
                 PersonCard(
                     individual = partner,
-                    label = "Partner",
+                    label = "Spouse",
                     modifier = modifier,
                     onClick = onIndividualSelected
                 )
