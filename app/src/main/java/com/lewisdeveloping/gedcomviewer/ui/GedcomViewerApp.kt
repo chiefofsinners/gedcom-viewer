@@ -1,6 +1,7 @@
 package com.lewisdeveloping.gedcomviewer.ui
 
 import android.content.Intent
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -45,8 +48,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -370,7 +375,13 @@ private fun FamilyPagerScreen(
         containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(text = currentIndividual?.displayName ?: "Family") },
+                title = {
+                    Text(
+                        text = currentIndividual?.displayName ?: "Family",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     if (historyState.size > 1 && currentPage > 0) {
                         IconButton(onClick = {
@@ -451,6 +462,12 @@ private fun HomeScreen(
 ) {
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     val colors = AppTheme.colors
+    val configuration = LocalConfiguration.current
+    val maxContentWidth = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        260.dp
+    } else {
+        260.dp
+    }
 
     Scaffold(
         containerColor = colors.background,
@@ -472,13 +489,16 @@ private fun HomeScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(0.9f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = "Select a GEDCOM file",
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
                 )
                 Text(
                     text = "Choose a local GEDCOM file to browse its family tree.",
@@ -493,8 +513,12 @@ private fun HomeScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                val buttonModifier = Modifier.widthIn(max = maxContentWidth)
+                val buttonTextStyle = MaterialTheme.typography.titleMedium
+
                 Button(
                     onClick = onBrowseFiles,
+                    modifier = buttonModifier,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.background,
@@ -502,25 +526,42 @@ private fun HomeScreen(
                         disabledContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(text = "Browse files")
+                    Text(
+                        text = "Browse files",
+                        style = buttonTextStyle,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 }
                 OutlinedButton(
                     onClick = onLoadSample,
+                    modifier = buttonModifier,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary,
                         disabledContentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(text = "Load sample data")
+                    Text(
+                        text = "Load sample data",
+                        style = buttonTextStyle,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 }
                 OutlinedButton(
                     onClick = { showThemeDialog = true },
+                    modifier = buttonModifier,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary,
                         disabledContentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(text = "Colour theme")
+                    Text(
+                        text = "Colour theme",
+                        style = buttonTextStyle,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
