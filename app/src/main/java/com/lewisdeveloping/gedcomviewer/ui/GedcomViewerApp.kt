@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
@@ -43,10 +44,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,10 +88,13 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     var navigationPath by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
     var suppressSelectionReset by remember { mutableStateOf(false) }
     var currentTab by rememberSaveable { mutableStateOf(FileActionBarSelection.HOME) }
+    var indexSearchQuery by rememberSaveable { mutableStateOf("") }
+    val indexListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     val showFullScreenLoading = uiState.isLoading && !uiState.needsFileSelection
     val data = uiState.data
     val errorMessage = uiState.error
     val selectedIndividualId = uiState.selectedIndividualId
+    val lastSuccessfulLoadId = uiState.lastSuccessfulLoadId
     val activeIndividualId = navigationPath.lastOrNull() ?: rootSelection
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -108,6 +112,13 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     }
     val openFilePicker: () -> Unit = {
         openDocumentLauncher.launch(arrayOf("*/*"))
+    }
+
+    LaunchedEffect(lastSuccessfulLoadId) {
+        if (lastSuccessfulLoadId != null) {
+            indexSearchQuery = ""
+            indexListState.scrollToItem(0)
+        }
     }
 
     LaunchedEffect(uiState.needsFileSelection, activeIndividualId) {
@@ -300,12 +311,14 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         IndividualsScreen(
                             individuals = data.individualsSortedByName,
                             currentFileName = uiState.currentFileName,
-                            lastSuccessfulLoadId = uiState.lastSuccessfulLoadId,
                             onNavigateHome = navigateHome,
                             onNavigateIndex = navigateIndex,
                             onNavigateFamily = navigateFamily,
                             familyEnabled = familyEnabled,
-                            onIndividualSelected = handleIndexSelection
+                            onIndividualSelected = handleIndexSelection,
+                            searchQuery = indexSearchQuery,
+                            onSearchQueryChange = { indexSearchQuery = it },
+                            listState = indexListState
                         )
                     }
                 }

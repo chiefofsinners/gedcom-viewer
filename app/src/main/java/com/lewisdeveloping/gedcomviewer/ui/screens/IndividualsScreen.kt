@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,16 +35,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,17 +67,17 @@ import java.util.Locale
 fun IndividualsScreen(
     individuals: List<Individual>,
     currentFileName: String?,
-    lastSuccessfulLoadId: String?,
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
     familyEnabled: Boolean,
     onIndividualSelected: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    listState: LazyListState
 ) {
     val colors = AppTheme.colors
-    val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    var searchQuery by rememberSaveable { mutableStateOf("") }
     val appTitle = stringResource(id = R.string.app_name)
     val displayTitle = remember(currentFileName) {
         currentFileName
@@ -116,15 +110,6 @@ fun IndividualsScreen(
 
     val sections = remember(filteredIndividuals) {
         buildSections(filteredIndividuals)
-    }
-
-    LaunchedEffect(lastSuccessfulLoadId) {
-        if (lastSuccessfulLoadId != null) {
-            searchQuery = ""
-            coroutineScope.launch {
-                listState.scrollToItem(0)
-            }
-        }
     }
 
     val letterPositions = remember(sections) {
@@ -173,7 +158,7 @@ fun IndividualsScreen(
         ) {
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -187,7 +172,7 @@ fun IndividualsScreen(
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = {
-                            searchQuery = ""
+                            onSearchQueryChange("")
                             coroutineScope.launch {
                                 listState.scrollToItem(0)
                             }
@@ -360,16 +345,20 @@ private fun IndividualsScreenPreview() {
         )
     )
 
+    val previewListState = rememberLazyListState()
+
     GedcomViewerTheme(theme = AppThemeOption.SILVER) {
         IndividualsScreen(
             individuals = individuals,
             currentFileName = "Sample-GEDCOM.ged",
-            lastSuccessfulLoadId = "preview",
             onNavigateHome = {},
             onNavigateIndex = {},
             onNavigateFamily = {},
             familyEnabled = false,
-            onIndividualSelected = {}
+            onIndividualSelected = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            listState = previewListState
         )
     }
 }
