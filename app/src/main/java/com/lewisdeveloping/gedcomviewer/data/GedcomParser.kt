@@ -398,6 +398,9 @@ class GedcomParser {
         }
 
         fun handle(tag: String, value: String?, pointer: String?, parentTag: String?): Boolean {
+            if (parentTag == "CHAN") {
+                return true
+            }
             if (parentTag == "NOTE" && (tag == "CONC" || tag == "CONT")) {
                 appendNoteContinuation(tag, value)
                 return true
