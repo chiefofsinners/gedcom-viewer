@@ -64,10 +64,8 @@ fun FamilyScreen(
         return
     }
 
-    val partnerFamily = findFamily(focus.familiesAsSpouse, data)
-    val partner = partnerFamily?.partnerFor(focus, data)
+    val spouseFamilies = focus.familiesAsSpouse.mapNotNull { data.families[it] }
     val focusParents = findFamily(focus.familiesAsChild, data)
-    val children = partnerFamily?.childrenIds?.mapNotNull { data.individuals[it] } ?: emptyList()
 
     BoxWithConstraints(
         modifier = baseModifier
@@ -97,22 +95,52 @@ fun FamilyScreen(
                 usePanelBackground = isTablet
             )
 
-            FamilyCoreSection(
-                focus = focus,
-                partner = partner,
-                marriage = partnerFamily?.marriage,
-                onIndividualSelected = onIndividualSelected,
-                isCompact = isCompact,
-                usePanelBackground = isTablet
-            )
+            if (spouseFamilies.isEmpty()) {
+                FamilyCoreSection(
+                    focus = focus,
+                    partner = null,
+                    marriage = null,
+                    sectionTitle = "Family",
+                    onIndividualSelected = onIndividualSelected,
+                    isCompact = isCompact,
+                    usePanelBackground = isTablet
+                )
+                ChildrenSection(
+                    children = emptyList(),
+                    onIndividualSelected = onIndividualSelected,
+                    stackVertically = stackChildrenVertically,
+                    isCompact = isCompact,
+                    usePanelBackground = isTablet
+                )
+            } else {
+                spouseFamilies.forEachIndexed { index, family ->
+                    val partner = family.partnerFor(focus, data)
+                    val children = family.childrenIds.mapNotNull { data.individuals[it] }
+                    val familyLabel = if (spouseFamilies.size > 1) {
+                        "Family ${index + 1}"
+                    } else {
+                        "Family"
+                    }
 
-            ChildrenSection(
-                children = children,
-                onIndividualSelected = onIndividualSelected,
-                stackVertically = stackChildrenVertically,
-                isCompact = isCompact,
-                usePanelBackground = isTablet
-            )
+                    FamilyCoreSection(
+                        focus = focus,
+                        partner = partner,
+                        marriage = family.marriage,
+                        sectionTitle = familyLabel,
+                        onIndividualSelected = onIndividualSelected,
+                        isCompact = isCompact,
+                        usePanelBackground = isTablet
+                    )
+
+                    ChildrenSection(
+                        children = children,
+                        onIndividualSelected = onIndividualSelected,
+                        stackVertically = stackChildrenVertically,
+                        isCompact = isCompact,
+                        usePanelBackground = isTablet
+                    )
+                }
+            }
         }
     }
 }
@@ -169,6 +197,7 @@ private fun FamilyCoreSection(
     focus: Individual,
     partner: Individual?,
     marriage: LifeEvent?,
+    sectionTitle: String = "Family",
     onIndividualSelected: (String) -> Unit,
     isCompact: Boolean,
     usePanelBackground: Boolean
@@ -176,7 +205,7 @@ private fun FamilyCoreSection(
     val colors = AppTheme.colors
     SectionContainer(usePanelBackground = usePanelBackground) {
         Text(
-            text = "Family",
+            text = sectionTitle,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
