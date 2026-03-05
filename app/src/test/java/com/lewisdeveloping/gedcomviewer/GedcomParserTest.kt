@@ -80,6 +80,49 @@ class GedcomParserTest {
     }
 
     @Test
+    fun parsesReversedNameFormat() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME /Bohe/ Walter Peter
+            2 SURN Bohe
+            2 GIVN Walter Peter
+            1 SEX M
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("Walter Peter", individual.givenName)
+        assertEquals("Bohe", individual.surname)
+        assertEquals("Walter Peter Bohe", individual.fullName)
+    }
+
+    @Test
+    fun givnAndSurnOverrideNameParsing() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME /Doe/ John
+            2 GIVN John
+            2 SURN Doe
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("John", individual.givenName)
+        assertEquals("Doe", individual.surname)
+        assertEquals("John Doe", individual.fullName)
+    }
+
+    @Test
     fun displaysUnnamedWhenNameAndTitleMissing() {
         val gedcom = """
             0 HEAD

@@ -115,6 +115,14 @@ class GedcomParser {
                                 individual.setName(value.orEmpty())
                                 handled = true
                             }
+                            tag == "GIVN" && parentTag == "NAME" -> {
+                                individual.setGivenName(value)
+                                handled = true
+                            }
+                            tag == "SURN" && parentTag == "NAME" -> {
+                                individual.setSurname(value)
+                                handled = true
+                            }
                             tag == "TITL" -> {
                                 individual.setTitle(value)
                                 handled = true
@@ -250,11 +258,38 @@ class GedcomParser {
         fun setName(raw: String) {
             if (raw.isBlank()) return
             val parts = raw.split('/')
-            givenName = parts.getOrNull(0)?.trim()?.takeIf { it.isNotEmpty() }
-            surname = parts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
-            val suffix = parts.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }
-            val constructed = listOfNotNull(givenName, surname, suffix).filter { it.isNotBlank() }
+            val before = parts.getOrNull(0)?.trim()?.takeIf { it.isNotEmpty() }
+            val between = parts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+            val after = parts.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }
+
+            surname = between
+            givenName = if (before != null) {
+                before
+            } else {
+                after
+            }
+
+            val constructed = listOfNotNull(givenName, surname).filter { it.isNotBlank() }
             fullName = constructed.joinToString(" ").ifBlank { raw.replace("/", "").trim() }
+        }
+
+        fun setGivenName(raw: String?) {
+            val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return
+            givenName = value
+            rebuildFullName()
+        }
+
+        fun setSurname(raw: String?) {
+            val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return
+            surname = value
+            rebuildFullName()
+        }
+
+        private fun rebuildFullName() {
+            val constructed = listOfNotNull(givenName, surname).filter { it.isNotBlank() }
+            if (constructed.isNotEmpty()) {
+                fullName = constructed.joinToString(" ")
+            }
         }
 
         fun setTitle(raw: String?) {
