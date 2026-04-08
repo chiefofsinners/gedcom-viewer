@@ -244,6 +244,7 @@ class GedcomParser {
         private var title: String? = null
         private var titleBuilder: StringBuilder? = null
         private var gender: Gender = Gender.UNKNOWN
+        private var inPrimaryName = false
 
         private val birthEvent = LifeEventBuilder()
         private val deathEvent = LifeEventBuilder()
@@ -256,7 +257,12 @@ class GedcomParser {
         var primaryObjectId: String? = null
 
         fun setName(raw: String) {
+            if (fullName.isNotBlank()) {
+                inPrimaryName = false
+                return  // Only use first NAME record
+            }
             if (raw.isBlank()) return
+            inPrimaryName = true
             val parts = raw.split('/')
             val before = parts.getOrNull(0)?.trim()?.takeIf { it.isNotEmpty() }
             val between = parts.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
@@ -274,12 +280,14 @@ class GedcomParser {
         }
 
         fun setGivenName(raw: String?) {
+            if (!inPrimaryName) return
             val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return
             givenName = value
             rebuildFullName()
         }
 
         fun setSurname(raw: String?) {
+            if (!inPrimaryName) return
             val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return
             surname = value
             rebuildFullName()

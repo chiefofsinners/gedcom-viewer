@@ -123,6 +123,29 @@ class GedcomParserTest {
     }
 
     @Test
+    fun usesFirstNameRecordWhenMultiplePresent() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME John /Smith/
+            2 TYPE aka
+            1 NAME James /Smyth/
+            2 TYPE birth
+            2 GIVN James
+            2 SURN Smyth
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("John Smith", individual.fullName)
+        assertEquals("John Smith", individual.displayName)
+    }
+
+    @Test
     fun displaysUnnamedWhenNameAndTitleMissing() {
         val gedcom = """
             0 HEAD
