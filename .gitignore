@@ -1,13 +1,7 @@
 *.iml
 .gradle
+.idea/
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-/.idea/deploymentTargetSelector.xml
 .DS_Store
 /build
 /captures
@@ -16,6 +10,9 @@
 local.properties
 specification
 *.apk
+*.aab
+*.hprof
+*.log
 /app/.idea
 /app/release
 google-services.json
