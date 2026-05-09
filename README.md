@@ -6,7 +6,7 @@ A native Android app for browsing genealogy data from GEDCOM files. Built with K
 
 - Open any `.ged` file from device storage, or explore the bundled sample
 - Searchable index of individuals
-- Family tree view with navigation history (swipe back through ancestors)
+- Family view with navigation history (swipe back through ancestors)
 - Per-individual details: life events, timeline, sources, notes
 - Material 3 theming with two built-in palettes
 - Supports GEDCOM 5.5.1, including `CONC`/`CONT` continuations and `GIVN`/`SURN` subtags
