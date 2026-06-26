@@ -70,7 +70,8 @@ class GedcomParser {
 
             val parentTag = context.lastOrNull()?.tag
             val pointerId = parsePointer(value)
-            val currentEventBuilder = context.lastOrNull { it.eventBuilder != null }?.eventBuilder
+            val currentEventContext = context.lastOrNull { it.eventBuilder != null }
+        val currentEventBuilder = currentEventContext?.eventBuilder
 
             var handled = false
             var addedContext = false
@@ -105,7 +106,7 @@ class GedcomParser {
                 currentIndividual?.let { individual ->
                     var consumed = false
                     currentEventBuilder?.let { builder ->
-                        consumed = builder.handle(tag, value, pointerId, parentTag)
+                        consumed = builder.handle(tag, value, pointerId, parentTag, level - currentEventContext!!.level)
                     }
                     if (consumed) {
                         handled = true
@@ -164,7 +165,7 @@ class GedcomParser {
                 currentFamily?.let { family ->
                     var consumed = false
                     currentEventBuilder?.let { builder ->
-                        consumed = builder.handle(tag, value, pointerId, parentTag)
+                        consumed = builder.handle(tag, value, pointerId, parentTag, level - currentEventContext!!.level)
                     }
                     if (consumed) {
                         handled = true
@@ -440,17 +441,29 @@ class GedcomParser {
             value = raw?.takeIf { it.isNotBlank() }
         }
 
-        fun handle(tag: String, value: String?, pointer: String?, parentTag: String?): Boolean {
+        /**
+         * @param depth the nesting depth of this line relative to the event tag itself
+         *   (1 = direct child such as the event's own DATE/PLAC, 2 = a continuation of a
+         *   direct child). Lines deeper than this belong to nested substructures such as
+         *   source citations (SOUR > DATA > DATE) and must NOT be treated as the event's
+         *   own data.
+         */
+        fun handle(tag: String, value: String?, pointer: String?, parentTag: String?, depth: Int): Boolean {
             if (parentTag == "CHAN") {
                 return true
             }
-            if (parentTag == "NOTE" && (tag == "CONC" || tag == "CONT")) {
+            if (depth == 2 && parentTag == "NOTE" && (tag == "CONC" || tag == "CONT")) {
                 appendNoteContinuation(tag, value)
                 return true
             }
-            if (parentTag == "ADDR" && (tag == "CONC" || tag == "CONT")) {
+            if (depth == 2 && parentTag == "ADDR" && (tag == "CONC" || tag == "CONT")) {
                 appendAddress(tag, value)
                 return true
+            }
+            if (depth != 1) {
+                // Belongs to a nested substructure (e.g. a source citation); ignore it so
+                // its DATE/PLAC/NOTE do not overwrite the event's own fields.
+                return false
             }
             return when (tag) {
                 "DATE" -> {

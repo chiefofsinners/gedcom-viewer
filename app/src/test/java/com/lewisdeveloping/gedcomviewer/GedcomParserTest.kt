@@ -146,6 +146,82 @@ class GedcomParserTest {
     }
 
     @Test
+    fun ignoresSourceCitationRecordingDateForEventDate() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME Charles /Hafner/
+            1 DEAT
+            2 DATE 21 Oct 2016
+            2 PLAC West Chester, Pa
+            2 SOUR @S49@
+            3 DATA
+            4 TEXT Charles P. Hafner Jr., 56, passed away on Friday, Oct. 21, 2016.
+            4 DATE 24 Oct 2016
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("21 Oct 2016", individual.death?.date)
+    }
+
+    @Test
+    fun usesEventDateWhenMultipleSourceCitationsPresent() {
+        val gedcom = """
+            0 HEAD
+            0 @I1@ INDI
+            1 NAME John /Doe/
+            1 DEAT
+            2 DATE 21 Jun 1977
+            2 SOUR @S1@
+            3 DATA
+            4 DATE 22 Jun 1977
+            2 SOUR @S2@
+            3 DATA
+            4 DATE 23 Jun 1977
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val individual = data.individuals.values.single()
+        assertEquals("21 Jun 1977", individual.death?.date)
+    }
+
+    @Test
+    fun ignoresSourceCitationRecordingDateForMarriageDate() {
+        val gedcom = """
+            0 HEAD
+            0 @F1@ FAM
+            1 MARR
+            2 DATE 1 Mar 1975
+            2 SOUR @S1@
+            3 DATA
+            4 DATE 1 Mar 1975
+            2 SOUR @S2@
+            3 DATA
+            4 DATE 2 Mar 1975
+            2 SOUR @S3@
+            3 DATA
+            4 DATE 2 Mar 1975
+            0 TRLR
+        """.trimIndent()
+
+        val data = ByteArrayInputStream(gedcom.toByteArray(StandardCharsets.UTF_8)).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val family = data.families.values.single()
+        assertEquals("1 Mar 1975", family.marriage?.date)
+    }
+
+    @Test
     fun displaysUnnamedWhenNameAndTitleMissing() {
         val gedcom = """
             0 HEAD
