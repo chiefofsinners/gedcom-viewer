@@ -239,4 +239,55 @@ class GedcomParserTest {
         assertTrue(individual.fullName.isBlank())
         assertTrue(individual.title.isNullOrBlank())
     }
+
+    @Test
+    fun parsesContentLargerThanHeaderWindow() {
+        // Streaming decode reads an 8 KB header prefix, pushes it back, then decodes the
+        // rest lazily. Generate well over 8 KB of records to exercise that boundary and
+        // confirm nothing is dropped or duplicated across it.
+        val builder = StringBuilder("0 HEAD\n1 CHAR UTF-8\n")
+        val count = 1_000
+        for (i in 1..count) {
+            builder.append("0 @I$i@ INDI\n1 NAME Person$i /Surname$i/\n")
+        }
+        builder.append("0 TRLR\n")
+        val bytes = builder.toString().toByteArray(StandardCharsets.UTF_8)
+        assertTrue("Fixture should exceed the header window", bytes.size > 8_192)
+
+        val data = ByteArrayInputStream(bytes).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        val names = data.individuals.values.map { it.displayName }.toSet()
+        assertEquals(count, data.individuals.size)
+        assertTrue("First record should survive the header boundary", "Person1 Surname1" in names)
+        assertTrue("Last record should survive the header boundary", "Person$count Surname$count" in names)
+    }
+
+    @Test
+    fun stripsUtf8ByteOrderMark() {
+        val gedcom = "0 HEAD\n0 @I1@ INDI\n1 NAME Jane /Roe/\n0 TRLR\n"
+        val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+        val bytes = bom + gedcom.toByteArray(StandardCharsets.UTF_8)
+
+        val data = ByteArrayInputStream(bytes).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        assertEquals("Jane Roe", data.individuals.values.single().displayName)
+    }
+
+    @Test
+    fun decodesDeclaredWindows1252Charset() {
+        // "1 CHAR ANSI" selects windows-1252; 0xE9 must decode to é, not a replacement char.
+        val header = "0 HEAD\n1 CHAR ANSI\n0 @I1@ INDI\n1 NAME Ren".toByteArray(StandardCharsets.US_ASCII)
+        val body = "e /Beaumont/\n0 TRLR\n".toByteArray(StandardCharsets.US_ASCII)
+        val bytes = header + byteArrayOf(0xE9.toByte()) + body
+
+        val data = ByteArrayInputStream(bytes).use { stream ->
+            GedcomParser().parse(stream)
+        }
+
+        assertEquals("Renée Beaumont", data.individuals.values.single().displayName)
+    }
 }

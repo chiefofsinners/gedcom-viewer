@@ -1,5 +1,9 @@
 package com.lewisdeveloping.gedcomviewer.data
 
+import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.PushbackInputStream
 import java.nio.charset.Charset
 import java.nio.charset.IllegalCharsetNameException
 import java.nio.charset.UnsupportedCharsetException
@@ -8,24 +12,79 @@ import kotlin.math.min
 internal class GedcomTextDecoder {
     private val anselDecoder = AnselDecoder()
 
-    fun decode(data: ByteArray): String {
-        if (data.isEmpty()) return ""
+    /**
+     * Streams the file line by line instead of holding the whole file in memory.
+     * The character set is chosen from the header prefix (BOM + `1 CHAR`), which is
+     * all the previous whole-buffer [decode] needed to pick a strategy, then the rest
+     * of the stream is decoded lazily. Keeps peak memory proportional to the data kept
+     * rather than the raw file size — GEDCOM files can embed large base64 media blobs.
+     */
+    fun readLines(stream: InputStream): Sequence<String> {
+        val pushback = PushbackInputStream(stream, HEADER_LIMIT)
+        val buffer = ByteArray(HEADER_LIMIT)
+        val read = fill(pushback, buffer)
+        if (read > 0) pushback.unread(buffer, 0, read)
+        val header = if (read == HEADER_LIMIT) buffer else buffer.copyOf(read)
 
+        val strategy = selectStrategy(header)
+        val charset = charsetFor(strategy)
+        return if (charset != null) {
+            // Multi-byte charsets (UTF-16) require a real Reader; a Reader also matches
+            // the old String(bytes, charset) replacement behaviour for malformed input.
+            pushback.reader(charset).buffered().lineSequence()
+        } else {
+            // ANSEL has no JVM charset. It is single-byte, so splitting on CR/LF at the
+            // byte level is safe, and each line is decoded independently.
+            anselLineSequence(pushback)
+        }
+    }
+
+    private fun selectStrategy(header: ByteArray): DecodingStrategy {
+        if (header.isEmpty()) return DecodingStrategy.UTF8
         val strategies = decodingStrategies(
-            bom = ByteOrderMark.detect(data),
-            declared = DeclaredCharset.fromData(data)
+            bom = ByteOrderMark.detect(header),
+            declared = DeclaredCharset.fromData(header)
         )
+        return strategies.firstOrNull { it == DecodingStrategy.ANSEL || charsetFor(it) != null }
+            ?: DecodingStrategy.UTF8
+    }
 
-        for (strategy in strategies) {
-            val decoded = decodeWithStrategy(data, strategy)
-            if (decoded != null) {
-                return decoded
+    private fun anselLineSequence(stream: InputStream): Sequence<String> = sequence {
+        val input = BufferedInputStream(stream)
+        val line = ByteArrayOutputStream()
+        var afterCr = false
+        while (true) {
+            val b = input.read()
+            if (b == -1) break
+            when (b) {
+                0x0A -> if (afterCr) {
+                    afterCr = false // swallow the LF of a CR/LF pair
+                } else {
+                    yield(anselDecoder.decode(line.toByteArray()))
+                    line.reset()
+                }
+                0x0D -> {
+                    yield(anselDecoder.decode(line.toByteArray()))
+                    line.reset()
+                    afterCr = true
+                }
+                else -> {
+                    afterCr = false
+                    line.write(b)
+                }
             }
         }
+        if (line.size() > 0) yield(anselDecoder.decode(line.toByteArray()))
+    }
 
-        throw GedcomParserException(
-            "Unable to decode the GEDCOM file using the declared character set."
-        )
+    private fun fill(stream: InputStream, buffer: ByteArray): Int {
+        var offset = 0
+        while (offset < buffer.size) {
+            val n = stream.read(buffer, offset, buffer.size - offset)
+            if (n < 0) break
+            offset += n
+        }
+        return offset
     }
 
     private fun decodingStrategies(
@@ -39,25 +98,15 @@ internal class GedcomTextDecoder {
         return ordered.toList()
     }
 
-    private fun decodeWithStrategy(data: ByteArray, strategy: DecodingStrategy): String? =
-        when (strategy) {
-            DecodingStrategy.UTF8 -> decodeWithCharset(data, Charsets.UTF_8)
-            DecodingStrategy.UTF16_LE -> decodeWithCharset(data, Charsets.UTF_16LE)
-            DecodingStrategy.UTF16_BE -> decodeWithCharset(data, Charsets.UTF_16BE)
-            DecodingStrategy.WINDOWS_CP1252 -> decodeWithCharset(data, charsetOrNull("windows-1252"))
-            DecodingStrategy.ISO_LATIN1 -> decodeWithCharset(data, Charsets.ISO_8859_1)
-            DecodingStrategy.ASCII -> decodeWithCharset(data, Charsets.US_ASCII)
-            DecodingStrategy.MAC_ROMAN -> decodeWithCharset(data, charsetOrNull("x-MacRoman"))
-            DecodingStrategy.ANSEL -> anselDecoder.decode(data)
-        }
-
-    private fun decodeWithCharset(data: ByteArray, charset: Charset?): String? {
-        if (charset == null) return null
-        return try {
-            String(data, charset)
-        } catch (_: Throwable) {
-            null
-        }
+    private fun charsetFor(strategy: DecodingStrategy): Charset? = when (strategy) {
+        DecodingStrategy.UTF8 -> Charsets.UTF_8
+        DecodingStrategy.UTF16_LE -> Charsets.UTF_16LE
+        DecodingStrategy.UTF16_BE -> Charsets.UTF_16BE
+        DecodingStrategy.WINDOWS_CP1252 -> charsetOrNull("windows-1252")
+        DecodingStrategy.ISO_LATIN1 -> Charsets.ISO_8859_1
+        DecodingStrategy.ASCII -> Charsets.US_ASCII
+        DecodingStrategy.MAC_ROMAN -> charsetOrNull("x-MacRoman")
+        DecodingStrategy.ANSEL -> null
     }
 
     private fun charsetOrNull(name: String): Charset? = try {
@@ -66,6 +115,10 @@ internal class GedcomTextDecoder {
         null
     } catch (_: IllegalCharsetNameException) {
         null
+    }
+
+    private companion object {
+        const val HEADER_LIMIT = 8_192
     }
 }
 

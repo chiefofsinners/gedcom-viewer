@@ -17,8 +17,6 @@ class GedcomParser {
     private val textDecoder = GedcomTextDecoder()
 
     fun parse(stream: InputStream, sourceIdentifier: String? = null): GedcomData {
-        val rawData = stream.use { it.readBytes() }
-        val contents = textDecoder.decode(rawData)
         val scope = IdentifierScope(sourceIdentifier)
 
         val individuals = linkedMapOf<String, IndividualBuilder>()
@@ -30,7 +28,7 @@ class GedcomParser {
         var currentNoteRecord: NoteRecordBuilder? = null
         val context = ArrayDeque<Context>()
 
-        contents.lineSequence().forEach { rawLine ->
+        textDecoder.readLines(stream).forEach { rawLine ->
             val line = rawLine.trimEnd().removePrefix("\uFEFF")
             if (line.isBlank()) return@forEach
 
