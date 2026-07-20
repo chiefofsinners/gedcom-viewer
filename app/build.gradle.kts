@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.lewisdeveloping.gedcomviewer"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.lewisdeveloping.gedcomviewer"
         minSdk = 28
-        targetSdk = 36
-        versionCode = 18
-        versionName = "1.63"
+        targetSdk = 37
+        versionCode = 19
+        versionName = "1.64"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,6 +22,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
