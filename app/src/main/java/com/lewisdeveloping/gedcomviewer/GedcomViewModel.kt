@@ -115,13 +115,16 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * Shows the file picker without touching the selection: visiting Home is not a change of
+     * person, and dropping it here would discard the Family tab's navigation history.
+     */
     fun showHome() {
         val current = _uiState.value
         _uiState.value = current.copy(
             isLoading = false,
             needsFileSelection = true,
-            error = null,
-            selectedIndividualId = null
+            error = null
         )
     }
 
@@ -132,6 +135,16 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
             reopensLastViewedIndividual = false
         )
         persistSelection(individualId)
+    }
+
+    /**
+     * Clears the reopen request once the UI has switched to the Family tab. Until this is
+     * called the UI holds its loading screen, so the index is never shown in between.
+     */
+    fun consumeReopenRequest() {
+        val current = _uiState.value
+        if (!current.reopensLastViewedIndividual) return
+        _uiState.value = current.copy(reopensLastViewedIndividual = false)
     }
 
     /**

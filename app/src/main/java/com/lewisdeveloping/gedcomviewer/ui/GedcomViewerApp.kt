@@ -90,12 +90,17 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     var currentTab by rememberSaveable { mutableStateOf(FileActionBarSelection.HOME) }
     var indexSearchQuery by rememberSaveable { mutableStateOf("") }
     val indexListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
-    val showFullScreenLoading = uiState.isLoading && !uiState.needsFileSelection
+    // A pending reopen keeps the loading screen up: the load has finished but the tab is
+    // still INDEX, so rendering now would flash the index before switching to Family.
+    val showFullScreenLoading = (uiState.isLoading || uiState.reopensLastViewedIndividual) &&
+        !uiState.needsFileSelection
     val data = uiState.data
     val errorMessage = uiState.error
     val selectedIndividualId = uiState.selectedIndividualId
     val lastSuccessfulLoadId = uiState.lastSuccessfulLoadId
-    val activeIndividualId = navigationPath.lastOrNull() ?: rootSelection
+    // Falls back to the view model's selection for the frame after a restore, before the
+    // effect below has copied it into rootSelection.
+    val activeIndividualId = navigationPath.lastOrNull() ?: rootSelection ?: selectedIndividualId
 
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -122,11 +127,11 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     }
 
     // A launch restore that recovered the last viewed individual opens straight on the
-    // Family tab. Runs before the effect below that derives rootSelection, so the tab and
-    // the root are both in place by the next recomposition.
+    // Family tab. Clearing the request afterwards is what releases the loading screen.
     LaunchedEffect(lastSuccessfulLoadId, selectedIndividualId) {
         if (uiState.reopensLastViewedIndividual && selectedIndividualId != null) {
             currentTab = FileActionBarSelection.FAMILY
+            viewModel.consumeReopenRequest()
         }
     }
 

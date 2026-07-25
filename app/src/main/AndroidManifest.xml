@@ -15,6 +15,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:label="@string/launcher_name"
             android:theme="@style/Theme.GEDCOMViewer">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
