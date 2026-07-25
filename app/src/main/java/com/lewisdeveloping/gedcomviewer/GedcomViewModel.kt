@@ -23,6 +23,12 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
     private var cachedFileName: String? = null
     private var cachedIsSample: Boolean = false
 
+    /**
+     * True while restoring the source saved from a previous launch, so the remembered
+     * individual can be reopened instead of landing on the index.
+     */
+    private var isRestoringSavedSource: Boolean = false
+
     private val _uiState = MutableStateFlow(
         GedcomUiState(isLoading = true, needsFileSelection = false)
     )
@@ -63,6 +69,8 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                 val data = repository.loadSample()
                 cacheLoadedData(data, uri = null, displayName = GedcomRepository.DEFAULT_FILE, isSample = true)
                 saveSource(uri = null, displayName = GedcomRepository.DEFAULT_FILE, isSample = true)
+                val restored = restoredSelection(data)
+                val reopensRestored = consumeSavedSourceRestoration(restored)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     data = data,
@@ -72,9 +80,11 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     currentFileName = GedcomRepository.DEFAULT_FILE,
                     isSampleData = true,
                     lastSuccessfulLoadId = UUID.randomUUID().toString(),
-                    selectedIndividualId = null
+                    selectedIndividualId = restored,
+                    reopensLastViewedIndividual = reopensRestored
                 )
             } catch (error: Throwable) {
+                consumeSavedSourceRestoration(null)
                 clearSavedSource()
                 if (previousState.data != null) {
                     _uiState.value = previousState.copy(
@@ -117,7 +127,54 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
 
     fun selectIndividual(individualId: String?) {
         val current = _uiState.value
-        _uiState.value = current.copy(selectedIndividualId = individualId)
+        _uiState.value = current.copy(
+            selectedIndividualId = individualId,
+            reopensLastViewedIndividual = false
+        )
+        persistSelection(individualId)
+    }
+
+    /**
+     * Remembers the individual being viewed so the next launch can reopen them. Stored
+     * alongside the data's source id so a different file never restores a stale person.
+     */
+    private fun persistSelection(individualId: String?) {
+        // Keyed off the loaded data only: with no data there is nothing meaningful to
+        // remember, and clearing here would discard the person on a transient load failure.
+        val sourceId = _uiState.value.data?.sourceId ?: return
+        val id = individualId?.trim()?.takeIf { it.isNotEmpty() }
+        if (id == null) {
+            clearSavedIndividual()
+            return
+        }
+        prefs.edit()
+            .putString(KEY_LAST_INDIVIDUAL_ID, id)
+            .putString(KEY_LAST_INDIVIDUAL_SOURCE_ID, sourceId)
+            .apply()
+    }
+
+    /** The previously viewed individual, if the saved record belongs to this data and still exists. */
+    private fun restoredSelection(data: GedcomData): String? {
+        if (prefs.getString(KEY_LAST_INDIVIDUAL_SOURCE_ID, null) != data.sourceId) return null
+        val id = prefs.getString(KEY_LAST_INDIVIDUAL_ID, null) ?: return null
+        return data.individual(id)?.id
+    }
+
+    /**
+     * Ends the launch restoration window and reports whether this load should reopen the
+     * remembered individual rather than showing the index.
+     */
+    private fun consumeSavedSourceRestoration(restored: String?): Boolean {
+        val wasRestoring = isRestoringSavedSource
+        isRestoringSavedSource = false
+        return wasRestoring && restored != null
+    }
+
+    private fun clearSavedIndividual() {
+        prefs.edit()
+            .remove(KEY_LAST_INDIVIDUAL_ID)
+            .remove(KEY_LAST_INDIVIDUAL_SOURCE_ID)
+            .apply()
     }
 
     fun openSavedIndex(): Boolean {
@@ -143,6 +200,7 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun loadSavedSource(showPickerIfMissing: Boolean) {
+        isRestoringSavedSource = true
         val mode = prefs.getString(KEY_LAST_MODE, null)
         when (mode) {
             MODE_SAMPLE -> loadSample()
@@ -153,10 +211,14 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     val uri = Uri.parse(uriString)
                     loadFromUriInternal(uri, displayName)
                 } else {
+                    isRestoringSavedSource = false
                     handleMissingSavedSource(showPickerIfMissing)
                 }
             }
-            else -> handleMissingSavedSource(showPickerIfMissing)
+            else -> {
+                isRestoringSavedSource = false
+                handleMissingSavedSource(showPickerIfMissing)
+            }
         }
     }
 
@@ -177,6 +239,10 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                 val data = repository.loadFromUri(uri)
                 cacheLoadedData(data, uri = uri, displayName = displayName, isSample = false)
                 saveSource(uri = uri, displayName = displayName, isSample = false)
+                // Reopening the same file keeps its remembered individual so the Family tab
+                // still has context, but only a launch restore jumps straight to them.
+                val restored = restoredSelection(data)
+                val reopensRestored = consumeSavedSourceRestoration(restored)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     data = data,
@@ -186,9 +252,11 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
                     currentFileName = displayName,
                     isSampleData = false,
                     lastSuccessfulLoadId = UUID.randomUUID().toString(),
-                    selectedIndividualId = null
+                    selectedIndividualId = restored,
+                    reopensLastViewedIndividual = reopensRestored
                 )
             } catch (error: Throwable) {
+                consumeSavedSourceRestoration(null)
                 if (previousState.data != null) {
                     _uiState.value = previousState.copy(
                         isLoading = false,
@@ -282,6 +350,8 @@ class GedcomViewModel(application: Application) : AndroidViewModel(application) 
         private const val KEY_LAST_MODE = "last_mode"
         private const val KEY_LAST_URI = "last_uri"
         private const val KEY_LAST_NAME = "last_name"
+        private const val KEY_LAST_INDIVIDUAL_ID = "last_individual_id"
+        private const val KEY_LAST_INDIVIDUAL_SOURCE_ID = "last_individual_source_id"
         private const val MODE_SAMPLE = "sample"
         private const val MODE_URI = "uri"
     }
@@ -296,5 +366,10 @@ data class GedcomUiState(
     val currentFileName: String? = null,
     val isSampleData: Boolean = false,
     val lastSuccessfulLoadId: String? = null,
-    val selectedIndividualId: String? = null
+    val selectedIndividualId: String? = null,
+    /**
+     * Set when a launch restore reopened the individual viewed last time, so the UI can
+     * open on the Family tab instead of the index.
+     */
+    val reopensLastViewedIndividual: Boolean = false
 )

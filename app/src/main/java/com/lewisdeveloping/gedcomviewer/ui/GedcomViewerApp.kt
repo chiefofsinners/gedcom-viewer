@@ -121,6 +121,15 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
         }
     }
 
+    // A launch restore that recovered the last viewed individual opens straight on the
+    // Family tab. Runs before the effect below that derives rootSelection, so the tab and
+    // the root are both in place by the next recomposition.
+    LaunchedEffect(lastSuccessfulLoadId, selectedIndividualId) {
+        if (uiState.reopensLastViewedIndividual && selectedIndividualId != null) {
+            currentTab = FileActionBarSelection.FAMILY
+        }
+    }
+
     LaunchedEffect(uiState.needsFileSelection, activeIndividualId) {
         val familyAvailable = activeIndividualId != null
         val desiredTab = when {
