@@ -48,7 +48,10 @@ fun currentPaneMode(): PaneMode {
         hinges.any { it.isVertical } &&
             sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> PaneMode.SIDE_BY_SIDE
         hinges.any { !it.isVertical && it.isSeparating } -> PaneMode.STACKED
-        sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> PaneMode.SIDE_BY_SIDE
+        // Tablets. The height check keeps a phone turned on its side, which is just as wide,
+        // on a single screen.
+        sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) &&
+            sizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND) -> PaneMode.SIDE_BY_SIDE
         else -> PaneMode.SINGLE
     }
 }
