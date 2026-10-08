@@ -1,5 +1,6 @@
 package com.lewisdeveloping.gedcomviewer.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -81,14 +82,16 @@ fun PersonRow(
     individual: Individual?,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    highlighted: Boolean = false,
     onClick: ((String) -> Unit)? = null
 ) {
+    val baseModifier = if (highlighted) modifier.background(AppTheme.colors.surface) else modifier
     val clickableModifier = if (individual != null && onClick != null) {
-        modifier
+        baseModifier
             .fillMaxWidth()
             .clickable { onClick(individual.id) }
     } else {
-        modifier.fillMaxWidth()
+        baseModifier.fillMaxWidth()
     }
 
     Column(

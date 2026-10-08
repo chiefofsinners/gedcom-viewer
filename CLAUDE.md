@@ -45,6 +45,8 @@ MVVM with Jetpack Compose and StateFlow. Single ViewModel (`GedcomViewModel`) ho
 
 **Navigation:** Bottom tab bar with three tabs (Home/Index/Family). Navigation history for the Family tree view is maintained as a stack within `GedcomUiState`.
 
+**Foldables / large screens:** `ui/components/ListDetailPanes.kt` picks a `PaneMode` from `currentWindowAdaptiveInfo()`. An unfolded book-style foldable (vertical hinge) or an expanded-width window shows Index and Family side by side, split exactly on the hinge; tabletop posture (horizontal separating hinge) puts Family above the fold and Index below. In two-pane mode the Family tab is hidden. The activity handles size/density config changes itself, so folding doesn't recreate it. Test on the `Pixel_10_Pro_Fold` AVD with `adb shell cmd device_state state 0|1|2` (closed/half-opened/opened); `screencap` needs `-d <display-id>` there.
+
 **Persistence:** Last-loaded file URI and theme choice are stored in SharedPreferences. Index sort order is preserved across tab transitions.
 
 ## GEDCOM Parser Notes

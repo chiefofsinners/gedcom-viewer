@@ -13,8 +13,8 @@ android {
         applicationId = "com.lewisdeveloping.gedcomviewer"
         minSdk = 28
         targetSdk = 37
-        versionCode = 23
-        versionName = "1.73"
+        versionCode = 25
+        versionName = "1.75"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material3.adaptive)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.kotlinx.coroutines.android)
 

@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyListState
@@ -67,6 +70,9 @@ import com.lewisdeveloping.gedcomviewer.ui.components.FileActionBarSelection
 import com.lewisdeveloping.gedcomviewer.ui.components.IndividualDetailsDialog
 import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanel
 import com.lewisdeveloping.gedcomviewer.ui.components.InfoPanelStyle
+import com.lewisdeveloping.gedcomviewer.ui.components.ListDetailPanes
+import com.lewisdeveloping.gedcomviewer.ui.components.PaneMode
+import com.lewisdeveloping.gedcomviewer.ui.components.currentPaneMode
 import com.lewisdeveloping.gedcomviewer.ui.screens.FamilyScreen
 import com.lewisdeveloping.gedcomviewer.ui.screens.IndividualsScreen
 import com.lewisdeveloping.gedcomviewer.ui.theme.AppTheme
@@ -258,6 +264,40 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
     }
     val familyEnabled = activeIndividualId != null
     val hasData = data != null
+    val paneMode = currentPaneMode()
+    val showFamilyTab = paneMode == PaneMode.SINGLE
+
+    val familyContent: @Composable (showBottomBar: Boolean) -> Unit = { showBottomBar ->
+        if (familyHistory.isEmpty() || activeIndividualId == null || data == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppTheme.colors.background)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+            ) {
+                InfoPanel(
+                    text = "Select an individual from the index to view family connections.",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    style = InfoPanelStyle.Info
+                )
+            }
+        } else {
+            FamilyPagerScreen(
+                historyIds = familyHistory,
+                activeIndividualId = activeIndividualId,
+                data = data,
+                onPopFamily = popFamily,
+                onIndividualSelected = pushFamily,
+                onNavigateHome = navigateHome,
+                onNavigateIndex = navigateIndex,
+                onNavigateFamily = navigateFamily,
+                familyEnabled = familyEnabled,
+                showBottomBar = showBottomBar
+            )
+        }
+    }
 
     GedcomViewerTheme(theme = currentTheme) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -272,42 +312,35 @@ fun GedcomViewerApp(viewModel: GedcomViewModel = viewModel()) {
                         onNavigateIndex = navigateIndex,
                         onNavigateFamily = navigateFamily,
                         familyEnabled = familyEnabled,
+                        showFamilyTab = showFamilyTab,
                         currentTheme = currentTheme,
                         onThemeSelected = onSelectTheme
                     )
                 }
-                currentTab == FileActionBarSelection.FAMILY && activeIndividualId != null && data != null -> {
-                    if (familyHistory.isEmpty()) {
-                        InfoPanel(
-                            text = "Select an individual from the index to view family connections.",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(24.dp),
-                            style = InfoPanelStyle.Info
-                        )
-                    } else {
-                        FamilyPagerScreen(
-                            historyIds = familyHistory,
-                            activeIndividualId = activeIndividualId,
-                            data = data,
-                            onPopFamily = popFamily,
-                            onIndividualSelected = pushFamily,
-                            onNavigateHome = navigateHome,
-                            onNavigateIndex = navigateIndex,
-                            onNavigateFamily = navigateFamily,
-                            familyEnabled = familyEnabled
-                        )
-                    }
-                }
-                currentTab == FileActionBarSelection.FAMILY && activeIndividualId == null -> {
-                    InfoPanel(
-                        text = "Select an individual from the index to view family connections.",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        style = InfoPanelStyle.Info
+                paneMode != PaneMode.SINGLE && data != null -> {
+                    ListDetailPanes(
+                        mode = paneMode,
+                        listPane = {
+                            IndividualsScreen(
+                                individuals = data.individualsSortedByName,
+                                currentFileName = uiState.currentFileName,
+                                onNavigateHome = navigateHome,
+                                onNavigateIndex = {},
+                                onNavigateFamily = {},
+                                familyEnabled = familyEnabled,
+                                onIndividualSelected = handleIndexSelection,
+                                searchQuery = indexSearchQuery,
+                                onSearchQueryChange = { indexSearchQuery = it },
+                                listState = indexListState,
+                                highlightedIndividualId = rootSelection,
+                                showFamilyTab = false
+                            )
+                        },
+                        detailPane = { familyContent(false) },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
+                currentTab == FileActionBarSelection.FAMILY && (data != null || activeIndividualId == null) -> familyContent(true)
                 else -> {
                     if (data == null) {
                         when {
@@ -356,7 +389,8 @@ private fun FamilyPagerScreen(
     onNavigateHome: () -> Unit,
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
-    familyEnabled: Boolean
+    familyEnabled: Boolean,
+    showBottomBar: Boolean
 ) {
     val pagerState = rememberPagerState(
         initialPage = historyIds.lastIndex.coerceAtLeast(0),
@@ -440,13 +474,15 @@ private fun FamilyPagerScreen(
             )
         },
         bottomBar = {
-            FileActionBar(
-                selected = FileActionBarSelection.FAMILY,
-                onNavigateHome = onNavigateHome,
-                onNavigateIndex = onNavigateIndex,
-                onNavigateFamily = onNavigateFamily,
-                familyEnabled = familyEnabled
-            )
+            if (showBottomBar) {
+                FileActionBar(
+                    selected = FileActionBarSelection.FAMILY,
+                    onNavigateHome = onNavigateHome,
+                    onNavigateIndex = onNavigateIndex,
+                    onNavigateFamily = onNavigateFamily,
+                    familyEnabled = familyEnabled
+                )
+            }
         }
     ) { padding ->
         HorizontalPager(
@@ -484,6 +520,7 @@ private fun HomeScreen(
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
     familyEnabled: Boolean,
+    showFamilyTab: Boolean,
     currentTheme: AppThemeOption,
     onThemeSelected: (AppThemeOption) -> Unit,
     availableThemes: List<AppThemeOption> = AppThemeOption.values().toList()
@@ -506,7 +543,8 @@ private fun HomeScreen(
                 onNavigateIndex = onNavigateIndex,
                 onNavigateFamily = onNavigateFamily,
                 indexEnabled = hasData,
-                familyEnabled = familyEnabled
+                familyEnabled = familyEnabled,
+                showFamily = showFamilyTab
             )
         }
     ) { padding ->

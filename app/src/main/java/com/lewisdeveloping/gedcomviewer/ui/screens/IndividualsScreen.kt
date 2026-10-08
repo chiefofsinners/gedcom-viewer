@@ -74,7 +74,9 @@ fun IndividualsScreen(
     onIndividualSelected: (String) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    listState: LazyListState
+    listState: LazyListState,
+    highlightedIndividualId: String? = null,
+    showFamilyTab: Boolean = true
 ) {
     val colors = AppTheme.colors
     val coroutineScope = rememberCoroutineScope()
@@ -147,7 +149,8 @@ fun IndividualsScreen(
                 onNavigateHome = onNavigateHome,
                 onNavigateIndex = onNavigateIndex,
                 onNavigateFamily = onNavigateFamily,
-                familyEnabled = familyEnabled
+                familyEnabled = familyEnabled,
+                showFamily = showFamilyTab
             )
         }
     ) { contentPadding ->
@@ -243,6 +246,7 @@ fun IndividualsScreen(
                                 PersonRow(
                                     individual = individual,
                                     supportingText = individual.birth?.description(),
+                                    highlighted = individual.id == highlightedIndividualId,
                                     onClick = onIndividualSelected
                                 )
                                 if (index < section.members.lastIndex) {

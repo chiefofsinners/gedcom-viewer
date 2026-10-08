@@ -23,7 +23,9 @@ fun FileActionBar(
     onNavigateIndex: () -> Unit,
     onNavigateFamily: () -> Unit,
     indexEnabled: Boolean = true,
-    familyEnabled: Boolean = true
+    familyEnabled: Boolean = true,
+    // Hidden when the family view is already on screen beside the index.
+    showFamily: Boolean = true
 ) {
     val homeClick = if (selected == FileActionBarSelection.HOME) ({}) else onNavigateHome
     val indexClick = if (!indexEnabled || selected == FileActionBarSelection.INDEX) ({}) else onNavigateIndex
@@ -60,7 +62,7 @@ fun FileActionBar(
             label = { Text(text = "Index") },
             colors = navItemColors
         )
-        NavigationBarItem(
+        if (showFamily) NavigationBarItem(
             selected = selected == FileActionBarSelection.FAMILY,
             enabled = familyEnabled,
             onClick = familyClick,

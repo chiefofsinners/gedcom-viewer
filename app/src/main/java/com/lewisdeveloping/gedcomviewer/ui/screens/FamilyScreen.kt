@@ -76,9 +76,10 @@ fun FamilyScreen(
         val isCompact = constraintsMaxWidth < 600.dp
         val isTablet = configuration.smallestScreenWidthDp >= 600
         val orientation = configuration.orientation
-        val stackChildrenVertically = !isTablet &&
-            (isCompact || orientation == Configuration.ORIENTATION_PORTRAIT ||
-                constraintsMaxHeight >= constraintsMaxWidth)
+        // isCompact goes by this pane's width, so a half-screen pane on an unfolded foldable
+        // stacks children even though the device itself counts as a tablet.
+        val stackChildrenVertically = isCompact || (!isTablet &&
+            (orientation == Configuration.ORIENTATION_PORTRAIT || constraintsMaxHeight >= constraintsMaxWidth))
 
         Column(
             modifier = Modifier
